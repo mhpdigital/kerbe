@@ -424,6 +424,64 @@ read it.
 
 **Acceptance:** a fresh clone with no `~/.claude/CLAUDE.md` runs safely with no dangling refs.
 
+### 1.4 The scoped-test-run blind spot (schema changes ship green and break the suite)
+
+**The defect.** A task adds a mapped ORM column and its migration, runs *its own* test file, sees
+green, and reports success — but the migration was never applied to the test database. The new
+mapping is now a column the schema does not have, so every test that persists that entity dies at
+INSERT. Observed in practice on a Doctrine build: one column, 46 broken tests, and an
+implementation report that stated "no new test failures introduced". The failing tests were all in
+*other* files, so nothing the implementer ran could have revealed it.
+
+This is a **lifecycle defect, not a stack defect**. The general shape:
+
+> A change whose effect is only observable through *other* components' tests cannot be validated
+> by a scoped test run.
+
+Schema mappings are the common case, but the same hole covers DI/container config, global
+middleware, shared fixtures, and changes to widely-referenced constants or enums.
+
+**Why the current suite misses it — three near-misses, no catch:**
+
+- `sdlc-implement:170` runs the full suite, but only at the **integration** step, after every
+  task is already committed. The signal arrives too late to attribute to a task.
+- `sdlc-code-review:52` puts migrations in tier 3 — *"Don't read. Trust the tests. If tests pass,
+  these are fine."* Sound only when "the tests" means the whole suite. The premise fails
+  **silently** under a scoped run, and the rule then actively suppresses the one read that would
+  have caught it.
+- `sdlc-bug:45–46` is the only place that says to apply the migration to both dev and test and
+  then run `doctrine:schema:validate`, and `sdlc-bug:106` even names the symptom
+  ("Fix committed without migration → works locally, fails on fresh deploy"). But it is
+  **bug-scoped** — nobody invokes a bug skill while implementing a planned feature task.
+
+**The fix, split along the adapter seam.** The gate is lifecycle; the commands are stack.
+
+- [ ] **`kerbe:implement`** — per-task gate, stack-agnostic wording: if a task's diff touches a
+      schema mapping or a schema-migration artifact, it is not done until the migration is applied
+      to the test database **and the full suite has been run**. The pasted full-suite summary is
+      the evidence; a scoped run is not accepted as a no-regression claim.
+- [ ] **Symfony adapter** — supplies the concrete apply / verify / validate commands.
+- [ ] **Flutter adapter** — record as **not applicable** rather than silently absent, per the
+      freeze rule's "or be consciously recorded as not applicable".
+- [ ] **`kerbe:review`** — narrow the tier-3 exemption: "trust the tests" becomes "trust a
+      **full-suite** run". When a diff contains a schema-mapping or migration change and the
+      report shows only a scoped run, the tier-3 skip does not apply.
+
+**Adapter authoring caution, learned the expensive way.** When the migration runner refuses to
+run because of an unrelated pre-existing failure, the adapter must tell the agent to **repair the
+runner** — e.g. record an already-applied version so the chain advances — never to document a
+per-command bypass. A bypass looks like helpful documentation and is really a defect being
+entrenched in every future session: agents that hit the error, read the workaround, and stop
+short of the full run reproduce this exact blind spot. One repair beats a rule everyone has to
+remember.
+
+**Freeze-rule status:** this is a **bug fix**, not a new feature, so under §"The freeze rule" it
+lands in `sdlc-*` as well as Kerbe.
+
+**Acceptance:** on a scratch branch, add a mapped column and its migration, deliberately skip
+applying it, and run the lifecycle as an implementing agent would. The task must be blocked
+before it can be reported complete.
+
 **→ `sdlc-*` is now FROZEN. Everything below happens in `~/projects/kerbe/`.**
 
 ---
