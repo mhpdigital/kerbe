@@ -482,6 +482,67 @@ lands in `sdlc-*` as well as Kerbe.
 applying it, and run the lifecycle as an implementing agent would. The task must be blocked
 before it can be reported complete.
 
+### 1.5 The per-round-brief blind spot (a convergence loop that measures its own framing)
+
+**The defect.** `coverage` stops when a round reports `new_this_round=0`. That number is only a
+property of the *feature* if every round searched the same space. Dispatch each round with a
+hand-written brief — round 1 broad, round 2 "re-verify what we found", round 3 "check these six
+legs" — and the count becomes a property of the *brief*. The loop then terminates on the round
+whose brief was narrowest, and reports convergence. Observed on the reference project: three
+rounds run this way, all three discarded, the loop restarted from a fixed invocation. It
+reproduced a failure the project had already documented once ("a loop that samples a fresh
+dimension each round and stops when a round is empty will never stop").
+
+This is a **lifecycle defect, not a stack defect**, and it generalises past `coverage`:
+
+> Any loop whose stopping condition is "this round found nothing new" measures the search space,
+> not the artifact. If the search space is re-specified per round, an empty round proves only
+> that the last brief was narrow.
+
+**Why the current suite misses it.** `sdlc-coverage` is thorough about what a round *does* —
+eight steps, adversarial verification, a two-consecutive-clean-rounds stop rule, and an explicit
+note that `new_this_round` is the convergence signal. It says nothing about how a round is
+*dispatched*, because the dispatcher is outside the skill: a human, or an agent orchestrating
+the loop. The invariance that makes the metric meaningful was assumed, never stated — so the
+skill could be followed exactly, every round, and still produce a false CONVERGED.
+
+**The fix, split along the seam.** The rule is lifecycle; the enforcement is harness.
+
+- [ ] **`kerbe:coverage`** — the round invocation is written **once**, before round 1, to
+      `{planning_root}/{slice}/COVERAGE_ROUND_INVOCATION.md`, and every round is dispatched by
+      pasting that file's fenced block verbatim. It carries only the invariant address of the
+      work (skill pointer, slice, mode, worktree, report path, environment constraints that hold
+      for *all* rounds, commit rule) — never a focus area, an exclusion, a prior finding, or the
+      round number. Editing it **restarts the loop**: the clean-round counter resets and earlier
+      rounds cannot be counted toward convergence.
+- [ ] **Guidance form** — written as a prohibition + rationalization table + red-flags list, not
+      as soft advice. The failure mode is a discipline failure under a live incentive to save
+      tokens by narrowing the next round, and soft wording loses that negotiation every time.
+- [ ] **Claude Code harness adapter** — ships the rule's enforcement: a `PreToolUse` hook on the
+      subagent-dispatch tool that denies any coverage-round dispatch whose prompt does not match
+      the stored block line-for-line, denies when no invocation file exists, and denies when the
+      block has changed since the last dispatch (an append-only dispatch log of invocation path +
+      block hash is what makes that last check possible). Fails **open** on internal error — a
+      broken guard must not wedge a session.
+- [ ] **Other harness adapters** — a harness with no pre-dispatch hook records the enforcement as
+      **prose-only** rather than silently absent, per §7.1's degradation ladder. The rule still
+      applies; only the guard rail is missing.
+
+**Scope caution.** The guard makes a per-round brief *deliberate and visible*, not impossible —
+a dispatch can always be reworded to dodge a trigger, and a round run inline (no subagent) never
+passes a dispatch hook at all. Write it as a tripwire on the ordinary path, not as a claim of
+containment, or the next reader will over-trust it.
+
+**Freeze-rule status:** this is a **bug fix**, not a new feature, so under §"The freeze rule" it
+lands in `sdlc-*` as well as Kerbe. Already applied there: the rule as a
+"Dispatching a round — the invocation is FROZEN" section in `~/.claude/skills/sdlc-coverage/SKILL.md`,
+the guard as `~/.claude/skills/sdlc-coverage/invocation-guard.py` registered in
+`~/.claude/settings.json`.
+
+**Acceptance:** dispatch a round with the stored block plus one extra line of focus — it must be
+refused, naming the offending line. Then edit the stored block and dispatch the new text — it
+must be refused as a mid-loop change. Then dispatch the block verbatim — it must pass.
+
 **→ `sdlc-*` is now FROZEN. Everything below happens in `~/projects/kerbe/`.**
 
 ---
@@ -900,6 +961,11 @@ adapters/harness/<name>/
       Each harness adapter states the highest rung it can reach. A harness at the bottom rung
       still runs the whole lifecycle — just slower and with more context pressure. Never let a
       missing primitive block a skill outright.
+
+- [ ] **Pre-dispatch enforcement** — whether the harness can inspect and refuse an outgoing
+      subagent dispatch (Claude Code: `PreToolUse`). Skills that depend on an invariant dispatch
+      (§1.5) name the rule in the skill body and the guard in the harness adapter; a harness
+      without the primitive records it in `limits.md` as prose-only enforcement.
 
 ### 7.2 Codex CLI
 
