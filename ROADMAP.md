@@ -1,4 +1,4 @@
-# Kerbe — portable slice-based SDLC plugin with stack adapters
+# Kerbe — portable slice-based SDLC plugin with stack and execution adapters
 
 > Plan created 2026-07-30, revised same day. Source: consistency analysis of the 13 `sdlc-*`
 > user-level skills plus `slice-start` in `~/.claude/skills/`.
@@ -135,7 +135,7 @@ A deliberate correction — do not re-litigate it. The suite defines `PLAN.md` a
 (`sdlc-implementation-plan`): *frozen instructions, the HOW, with code*, scoped to **one thin
 vertical slice**, consumed by `sdlc-implement` which derives `claude-progress.md` from it.
 
-This document is none of those things: it spans seven phases and months, contains no code, and
+This document is none of those things: it spans eight phases and months, contains no code, and
 has been revised repeatedly. It is a **program roadmap**, one level above any slice. Filing it as
 a slice `PLAN.md` would have it claiming to be a frozen task list for a single slice — the same
 conflation `sdlc-coverage:65` already warns about, one level up.
@@ -161,6 +161,7 @@ Each phase becomes one or more real slices under `planning/kerbe/slices/`, each 
 | 5 Scrub | `scrub` | |
 | 6 Publish | `publish-claude-code` | |
 | 7 Other harnesses | `harness-codex`, `harness-zcode`, … | one slice per harness |
+| 8 Executor adapters | `executor-adapters` | Claude Code orchestrates; task workers may be Codex/opencode/Pi |
 
 ### Bootstrap ordering — be honest about it
 
@@ -298,6 +299,85 @@ existing `sync-agent-md` user skill implements (though inverted — it makes CLA
 and it is what ZCode's own docs recommend. Kerbe should invert `sync-agent-md`'s direction,
 because a published multi-harness plugin has the broader standard as its centre of gravity, not
 Claude. **Getting this right on day one is free; retrofitting it is a rewrite.**
+
+### The third axis: executor adapters
+
+Harness adapters answer: **which product is running Kerbe as the orchestrator?** Executor
+adapters answer a different question: **which headless worker CLI performs a delegated task, at
+what reasoning effort, while the orchestrator remains Claude Code?**
+
+Keep the axes separate:
+
+| Axis | Question | Example |
+|---|---|---|
+| Stack adapter | What kind of product/repo is this slice changing? | Symfony, Flutter, docs |
+| Harness adapter | What environment is running Kerbe itself? | Claude Code, Codex CLI, ZCode |
+| Executor adapter | What CLI does the work for a delegated task slot? | Claude Code Agent, `codex exec`, `opencode run`, `pi -p` |
+
+The executor axis is cheaper than the harness axis. It does **not** need a new plugin manifest,
+installer, skill publishing path, or invocation syntax. It needs a reliable shell invocation
+contract, prompt preamble, sandbox/working-directory policy, structured result format, and a
+mapping from Kerbe's lifecycle effort vocabulary to each vendor's flags.
+
+#### Executor choice is configuration, not taste
+
+Executor selection must be reproducible. Resolution order:
+
+1. Explicit slice/task argument
+2. `kerbe.config.md` route
+3. Adapter default
+4. Ask once and offer to write the choice back to config
+
+Never choose a worker ad hoc at dispatch time. If two runs use different executors, the reason
+must be visible in config or in the slice plan.
+
+Effort is a lifecycle property first, then translated per executor:
+
+| Lifecycle effort | Claude Code Agent | Codex CLI | opencode | Pi |
+|---|---|---|---|---|
+| `low` | low effort | `-c model_reasoning_effort=low` | `--variant minimal` | `--thinking low` |
+| `standard` | inherited/default | `-c model_reasoning_effort=medium` | default | `--thinking medium` |
+| `deep` | high effort | `-c model_reasoning_effort=high` | `--variant max` | `--thinking xhigh` |
+
+Example config shape:
+
+```markdown
+executor: claude
+executor_routing:
+  scaffold-fill: claude@low
+  business-logic: claude@standard
+  test-authoring: codex@deep
+  adversarial-verify: codex@deep
+```
+
+The one principled route, before any benchmark data exists: adversarial verification should
+prefer a different vendor from the author executor. Its value is independent blind spots. All
+other routing choices are empirical and must be justified by baseline data: green-first-try
+rate, review findings, wall clock, cost, and diff quality.
+
+#### Executor safety rules
+
+- The orchestrator remains the single writer for `claude-progress.md` and `TIMING.md`. Workers
+  report completion; they do not tick lifecycle state.
+- Git safety rules must be injected for every executor. `AGENTS.md` is the canonical source,
+  but each executor adapter must declare whether it reads context files automatically or needs
+  an inline/system prompt preamble.
+- Structured output is preferred. When an executor supports JSON or schema-constrained output,
+  Kerbe uses it and rejects unparseable completion reports.
+- A shell-dispatched executor bypasses Claude Code's `Agent`/`Task` hooks. Any Phase 1.5
+  pre-dispatch guard that is load-bearing for Claude Code must either be extended to the Bash
+  command path or recorded as prose-only enforcement for that executor.
+- Executor support is claimed only after one real slice task has run through that executor and
+  the result has been reviewed by the orchestrator.
+
+#### Placement decision
+
+Do **not** add executor adapters to the frozen `sdlc-*` suite. Under the freeze rule this is a
+new feature, not a bug fix. It belongs in Kerbe after the plugin contract exists.
+
+Also do **not** fold executor adapters into Phase 7. Phase 7 is "Kerbe runs on other harnesses."
+Executor adapters are "Kerbe runs on Claude Code and delegates worker slots to other CLIs." They
+share vocabulary but not packaging, installation, or test evidence.
 
 ### The pivot vocabulary: artifact kinds
 
@@ -586,10 +666,18 @@ base_branch: origin/review/main
 planning_branch: <branch planning docs live on>
 timezone: Pacific/Auckland
 editor_command: phpstorm --line {line} {file}
+executor: claude                      # default task worker when no route matches
+executor_routing:                     # optional task-class overrides
+  scaffold-fill: claude@low
+  business-logic: claude@standard
+  test-authoring: codex@deep
+  adversarial-verify: codex@deep
 ```
 
 - [ ] Resolution order: explicit arg → config → adapter default → ask once, offer to write it in
 - [ ] Absent config is **not** fatal — degrade to defaults + one clarifying question
+- [ ] Executor routing uses the same resolution order. A route records **task class + executor +
+      effort**, never just a vendor name.
 
 ### 2.3 Adapter contract — pressure-tested by stubbing BOTH adapters
 
@@ -616,6 +704,35 @@ adapters/stack/<name>/
 
 **Acceptance:** two stubbed adapters both satisfy the contract, and no field exists that only
 one stack can express.
+
+### 2.4 Executor contract stub
+
+Do not implement foreign executors yet. Phase 2 only reserves the seam so `implement`,
+`coverage`, and `review` can be authored without hardcoding Claude Code's `Agent` tool.
+
+```
+adapters/executor/
+├── EXECUTOR_CONTRACT.md
+└── claude/
+    ├── EXECUTOR.md      # identity, availability check, supported effort levels
+    ├── invoke.md        # dispatch command/tool shape, cwd/worktree policy
+    ├── output.md        # completion report schema and parse/reject rules
+    └── limits.md        # hook coverage, sandbox gaps, missing structured output, etc.
+```
+
+- [ ] Author `adapters/executor/EXECUTOR_CONTRACT.md`
+- [ ] Stub `adapters/executor/claude/` as the default executor
+- [ ] Add empty stubs for `codex/`, `opencode/`, and `pi/` only if the contract needs real
+      pressure; otherwise defer them to Phase 8
+- [ ] Skill bodies name executor **intent** only: "run this task in an isolated worker with
+      `deep` effort and structured completion output"
+- [ ] The executor adapter supplies the mechanism: `Agent`, `codex exec`, `opencode run`, or
+      `pi -p`
+- [ ] Executor adapters may not write progress ledgers. Completion output feeds the orchestrator,
+      which updates `claude-progress.md`
+
+**Acceptance:** `kerbe:implement` can be written without a literal `Agent({...})` call in the
+skill body, and the default Claude executor can express the current `sdlc-implement` behaviour.
 
 ---
 
@@ -1017,21 +1134,106 @@ Cheap once the above exists; superpowers has a working manifest for each.
 
 ---
 
+## Phase 8 — Executor adapters
+
+Deliberately **after** the Claude Code plugin and harness contract exist. Executor adapters are
+useful earlier than full harness support, but implementing them before the Kerbe skill bodies
+are thinned would force the seam to match today's `sdlc-implement` implementation instead of
+the intended Kerbe contract.
+
+Phase 8 is optional for publishing. Kerbe is complete if Claude Code orchestrates and Claude
+Code workers implement. Executor adapters become worth doing when there is a concrete reason:
+cost, latency, rate-limit separation, stronger sandboxing, or adversarial review by a different
+vendor.
+
+### 8.1 Evidence spike before design hardening
+
+Run one real, bounded task through each candidate before writing more than the contract stub.
+The spike must use an actual worktree and produce a reviewed diff, not just a hello-world CLI
+call.
+
+- [ ] Pick one low-risk task class, preferably `test-authoring` or adversarial verification
+- [ ] Run the same task once with the Claude executor and once with the candidate executor
+- [ ] Capture: command, model/effort flags, wall clock, whether structured output parsed, files
+      touched, tests run, review findings, and any sandbox/hook failures
+- [ ] Record the result in `BASELINE_LOG.md` or a dedicated `EXECUTOR_BASELINE.md`
+- [ ] Do not add a routing default for an executor until its spike has at least one clean run
+
+### 8.2 Codex executor
+
+Codex is the first candidate because it already has a headless command and can provide
+schema-constrained output.
+
+- [ ] `adapters/executor/codex/EXECUTOR.md` — availability probe (`codex --version`), supported
+      model and effort fields, minimum version
+- [ ] `invoke.md` — `codex exec -C {worktree} -m {model} -c model_reasoning_effort={effort} …`
+      plus sandbox policy
+- [ ] `output.md` — prefer `--output-schema`; reject malformed JSON completion reports
+- [ ] `limits.md` — shell dispatch bypasses Claude Code subagent hooks unless the Bash command
+      path is guarded; context injection comes from `AGENTS.md` and/or the prompt
+- [ ] Verify with one real task and compare against the Claude executor baseline
+
+### 8.3 opencode executor
+
+- [ ] `adapters/executor/opencode/EXECUTOR.md` — availability probe (`opencode --version`),
+      provider/model naming, supported variants
+- [ ] `invoke.md` — `opencode run --dir {worktree} -m {provider/model} …`
+- [ ] `output.md` — document whether JSON output is stable enough for completion parsing
+- [ ] `limits.md` — context-file loading, sandbox behaviour, and whether effort maps cleanly to
+      `minimal` / default / `max`
+- [ ] Verify with one real task before adding any default route
+
+### 8.4 Pi executor
+
+- [ ] `adapters/executor/pi/EXECUTOR.md` — availability probe (`pi --version`), provider/model
+      support, thinking levels
+- [ ] `invoke.md` — `pi -p {prompt} --mode json --thinking {effort}` plus tool allowlist and
+      cwd policy
+- [ ] `output.md` — JSON completion report contract
+- [ ] `limits.md` — system-prompt injection via `--append-system-prompt`, tool restrictions,
+      and any missing worktree isolation primitive
+- [ ] Verify with one real task before adding any default route
+
+### 8.5 Routing policy
+
+- [ ] Keep `executor: claude` as the default until another executor beats it on measured data
+- [ ] Prefer cross-vendor routing for `adversarial-verify` once the candidate has passed a real
+      spike
+- [ ] Never route schema/migration tasks to an executor whose sandbox or command permissions
+      prevent full-suite validation
+- [ ] Route records must include effort: `codex@deep`, not `codex`
+- [ ] README documents executor support separately from harness support; "Codex executor" does
+      not imply "Codex harness"
+
+**Phase 8 exit criteria:**
+
+1. At least one non-Claude executor has a real-task baseline
+2. Its adapter declares invoke/output/limits clearly enough for `kerbe:implement` to use it
+3. `kerbe.config.md` can route a task class to it deterministically
+4. The README support matrix distinguishes stack, harness, and executor support
+
+---
+
 ## Sequencing summary
 
 | Phase | Depends on | Deliverable |
 |---|---|---|
 | 1 Hygiene | — | one slice-creation skill; superpowers-optional; git/context rules inlined. **Then `sdlc-*` freezes.** |
-| 2 Scaffold + contract | 1 | repo, `kerbe.config.md`, contract pressure-tested by stubbing **both** adapters, then frozen |
+| 2 Scaffold + contract | 1 | repo, `kerbe.config.md`, stack/harness/executor seams, contract pressure-tested by stubbing **both** stack adapters, then frozen |
 | **3 Both adapters (concurrent)** | 2 | **A:** Symfony extracted by copy, zero hardcoded paths, skills thinned · **B:** Flutter adapter written during the real build · **C:** continuous baseline comparison + `BASELINE_LOG.md` |
 | 4 Retire `sdlc-*` | 3 | single suite; freeze rule ends |
 | 5 Scrub | 4 | publishable content; `github-issues` adapter; monday held back |
 | 6 Publish (Claude Code) | 5 | licence chosen; self-hosted marketplace, then optional directory submission |
 | 7 Other harnesses | 6 | harness adapter contract + degradation ladder; Codex packaged; ZCode documented; Gemini/Pi/opencode opportunistic |
+| 8 Executor adapters | 6, 2.4 | Claude Code orchestrates while selected task workers run through Codex/opencode/Pi; routing is measured and deterministic |
 
-**Two decisions belong in Phase 2 even though they only pay off in Phases 6–7:** `AGENTS.md` as
+**Two decisions belong in Phase 2 even though they mostly pay off in Phases 6–8:** `AGENTS.md` as
 the canonical context file, and zero harness tool names in skill bodies. Both are free now and a
 rewrite later.
+
+**One more decision belongs in Phase 2 even though it only pays off in Phase 8:** skill bodies
+must express executor intent, not worker mechanics. This is what keeps `kerbe:implement` from
+becoming another Claude-Code-shaped file.
 
 Phases 1–3 are worth doing **even if publishing never happens** — they fix a live skill
 collision, a hard dependency on a third-party plugin, and a missing git safety rule.
