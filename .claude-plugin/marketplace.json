@@ -1,0 +1,7 @@
+{
+  "name": "kerbe-marketplace",
+  "owner": { "name": "MHP Digital" },
+  "plugins": [
+    { "name": "kerbe", "source": "./", "description": "Portable slice-based SDLC skills with stack and design adapters." }
+  ]
+}
