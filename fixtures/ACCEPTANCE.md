@@ -1,0 +1,45 @@
+# Coverage fixtures — the acceptance gate
+
+Any change to `skills/coverage/` (SKILL.md, references, scripts) or `adapters/` must pass
+this gate **before** it is used on a real project. The fixtures are the skill's regression
+tests: planted, known gaps plus planted decoys.
+
+## Procedure (per fixture: `symfony-mini`, `flutter-mini`)
+
+1. Copy the fixture to a scratch directory (produced files must never dirty the repo copy).
+2. Dispatch a **fresh subagent** whose prompt is: read `<repo>/skills/coverage/SKILL.md`
+   and execute it end-to-end in **audit** mode on the fixture's slice (`cards` / `gallery`)
+   with the scratch copy as the target project root, writing `PROMISES.md` and
+   `OUT_OF_SCOPE.md` into the slice folder. The agent may run the extraction and
+   verification passes inline (sequentially) when it cannot dispatch its own subagents —
+   the gate tests the procedure's output, not its parallelism.
+3. Score the output:
+   ```bash
+   python3 fixtures/score.py fixtures/<fixture>/EXPECTED.json <scratch>/planning/slices/<slice>/PROMISES.md
+   python3 skills/coverage/scripts/verdict.py <scratch>/planning/slices/<slice>/PROMISES.md
+   ```
+4. **Determinism:** run step 2–3 a second time from a fresh scratch copy. The **gap
+   portion** of the two verdict blocks must be identical: the same hop-break counts
+   (`GAP` / `partial` / `absent` / `unverified`) and the same set of open findings. The
+   total `promises` count may differ between independent extractions (agents mint
+   `present` rows at slightly different leaf granularity — observed 10 vs 8 on
+   symfony-mini with identical gap findings). That looseness is acceptable because in
+   production extraction runs **once** and the frozen, committed ledger is the
+   denominator; re-verification always reuses it, so granularity variance never enters a
+   real run. If the *gap* portion ever differs between runs, the skill wording is not
+   binding — fix it.
+
+**Pass = every `require` PASS, every `forbid` PASS on both runs, gap portion identical
+across the two runs.**
+A failure means the skill/adapter wording is not binding — fix it and rerun; that is the
+harness doing its job. Never debug skill changes on a live project.
+
+`GOLDEN.md` in each fixture is a hand-authored correct ledger: it must always score clean
+(`score.py` exit 0) and is the reference for how rows should be written.
+
+## Recorded runs
+
+| Date | Fixture | Model | Result |
+|---|---|---|---|
+| 2026-08-20 | symfony-mini | sonnet | PASS — 9/9 checks on both runs; gap portion identical (6 open: download row, filter chips, share popup, dead export link, unimported hover, receipt stub); promise total varied 10 vs 8 (present-row granularity, see criterion above) |
+| 2026-08-20 | flutter-mini | sonnet | PASS after harness fix — first run exposed two plants authored `absent` while EXPECTED said `partial` (fixture corrected: unrouted detail screen, undeclared Image.asset; `origin` semantics tightened in ledger.md); two post-fix runs 4/4 checks, verdict blocks byte-identical |
