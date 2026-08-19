@@ -21,6 +21,8 @@ The file is read by the agent (no YAML library involved); keep it simple and fla
 | `kerbe.stack.adapter` | `symfony` \| `flutter` | yes | Which `adapters/stack/<name>/verify.md` defines "present and wired". |
 | `kerbe.stack.code_roots` | list of paths | yes | Where the slice's implementation lives. Used for mode auto-detect (substantially no slice artifacts under these roots ⇒ pre-impl) and as the search space for verification. May contain `{slice}`, which interpolates the slice id — for projects where each slice's code lives in its own sibling worktree (e.g. `../<repo>-{slice}/src/`). Resolve it before use and verify the resulting path exists (and, when it is a git checkout, that it is on the slice's branch) — a missing or wrong-branch code root is a hard stop, not an `absent` verdict. |
 
+| `kerbe.constraints` | list of strings | optional | Environment rules that hold for **every** dispatch this skill makes (e.g. "do not run any test command — the test database is shared"). The skill appends them verbatim to every extractor/verifier prompt. Constraints state what agents must not do to the environment; they never narrow what is searched. |
+
 ## Resolution rules
 
 1. `kerbe.yml` is read from the root of the target project (the repo the slice belongs to).

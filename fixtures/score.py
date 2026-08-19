@@ -32,8 +32,11 @@ def main(argv):
         print(("PASS " if hit else "FAIL ") + "require: " + req["desc"])
         failures += 0 if hit else 1
     for forb in expected.get("forbid", []):
+        # A decoy is "counted" when it became a promise row, so match the promise
+        # cell only — evidence legitimately cites decoys as context (e.g. a dead
+        # helper mentioned while proving a dead link).
         rx = re.compile(forb["any_re"])
-        hit = [r["id"] for r in rows if rx.search(r["promise"]) or rx.search(r["evidence"])]
+        hit = [r["id"] for r in rows if rx.search(r["promise"])]
         ok = not hit
         print(("PASS " if ok else "FAIL ") + "forbid: " + forb["desc"]
               + ("" if ok else " (counted in " + " ".join(hit) + ")"))

@@ -44,13 +44,22 @@ Hard rules:
 - **`origin` means the promise enters the relay at or upstream of this column.** A
   plan-originated promise (`promised-by: plan:…`) therefore carries `spec: origin` —
   `GAP` is only for a hop the relay should have carried the promise across and didn't
-  (`spec: GAP` = a *design-originated* promise no spec doc captures). A plan task with no
-  spec/design origin is a reverse-direction observation: note it in the drop-file (plan
-  invented scope, or the spec is behind), never as a `GAP`.
+  (`spec: GAP` = a *design-originated* promise no spec doc captures).
+- **A planned deliverable is ALWAYS a ledger row**, even when no spec/design clause backs
+  the plan task: the plan is approach documentation, and a planned thing that is unbuilt
+  or unwired is missing functionality. Write it as `promised-by: plan:<task>`,
+  `spec: origin`, and verify its code hop normally. The *doc mismatch itself* (plan
+  invented scope, or the spec is behind) is the reverse-direction observation — note that
+  in the drop-file, never as a `spec: GAP`, and never by dropping the row.
 - `absent` vs `partial`: `absent` = nothing of the promise exists; `partial` = something
   exists but a link in its wiring chain is broken (stub, unregistered route, dead link,
   unimported stylesheet, undeclared asset). When nothing exists at all, the row is
   `absent` even if the plan names it.
+- **Every hop is checked against the promise itself, and a broken hop never blanks the
+  ones after it.** A design-originated promise no spec captures can still be checked for
+  a plan task and for code — so it carries `spec: GAP`, `plan: GAP` (if no task covers
+  it), `code: absent` (if nothing is built). `?` means only "this check has not run or
+  could not run", never "upstream was GAP so I stopped".
 - Built-but-diverging-from-design (part of the promise undelivered) is `partial` with the
   divergence in evidence.
 
@@ -66,7 +75,7 @@ EXTRACTION: converged (passes=3)
 
 | id | promise | promised-by | spec | plan | code | evidence |
 |----|---------|-------------|------|------|------|----------|
-| P-001 | Filter chips row on index | figma:1:4 | GAP | ? | ? | no spec doc mentions filter chips |
+| P-001 | Filter chips row on index | figma:1:4 | GAP | GAP | absent | no spec doc mentions filter chips; no plan task covers them; no template renders chip markup |
 | P-002 | Share-by-email popup on detail | req:REQ-CARD-004 | origin | GAP | ? | no plan task covers the share popup |
 | P-003 | Download row on detail | figma:2:2 | req:REQ-CARD-002 | task:T3 Download row | absent | no template renders a download row |
 | P-004 | Card hover style | req:REQ-CARD-005 | origin | task:T5 hover style | partial | templates/card/index.html.twig:6 renders .card-hover; _hover.scss defines it but app.scss never imports it |

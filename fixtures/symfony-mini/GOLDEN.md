@@ -9,7 +9,7 @@ EXTRACTION: converged (passes=3)
 |----|---------|-------------|------|------|------|----------|
 | P-001 | Card grid on index page | figma:1:3 | doc:UI_ELEMENTS.md#cards-ui-elements | task:T1 index page | present | templates/card/index.html.twig:5 .card-grid; _card.scss:1 rule; app.scss:1 imports card; src/Controller/CardController.php:12 route card_index |
 | P-002 | Card detail page with description | req:REQ-CARD-002 | origin | task:T2 detail page | present | templates/card/detail.html.twig:9 .card-description; src/Controller/CardController.php:24 route card_detail |
-| P-003 | Filter chips row on index | figma:1:4 | GAP | ? | ? | no spec doc mentions filter chips; UI_ELEMENTS.md has no entry for figma:1:4 |
+| P-003 | Filter chips row on index | figma:1:4 | GAP | GAP | absent | no spec doc mentions filter chips; UI_ELEMENTS.md has no entry for figma:1:4; no plan task covers them; index.html.twig renders no chip markup |
 | P-004 | Download action row on detail | figma:2:2 | req:REQ-CARD-002 | task:T3 Download row | absent | no template renders a download row; detail.html.twig has no download markup |
 | P-005 | Export as PDF from detail toolbar | figma:2:3 | req:REQ-CARD-003 | task:T4 Export toolbar link | partial | templates/card/detail.html.twig:6 links /cards/export; no route defines that path in src/ — dead link |
 | P-006 | Share-by-email popup on detail | figma:2:4 | req:REQ-CARD-004 | GAP | absent | no plan task covers the share popup; no template renders share markup |

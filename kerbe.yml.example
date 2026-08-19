@@ -15,3 +15,5 @@ kerbe:
   stack:
     adapter: symfony                      # symfony | flutter
     code_roots: ["symfony/"]              # where the slice's implementation lives, for mode auto-detect and verification
+  constraints: []                         # environment rules that hold for EVERY dispatch, e.g.
+    # - "do not run any test command — the test database is shared"

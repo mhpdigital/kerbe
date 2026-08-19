@@ -5,6 +5,7 @@ description: >-
   plan task everything the design and spec promise?) or before sign-off (is everything
   promised actually built and wired?) — or when the user asks what is missing, whether
   anything was dropped between design, spec, plan and code, or for a to-build inventory.
+disable-model-invocation: true
 ---
 
 # kerbe:coverage — is anything promised missing from the build?
@@ -46,7 +47,10 @@ stylesheet, class mismatch — **is** in scope: that is how a feature ships as a
    (`adapters/design/{name}.md`) and stack adapter (`adapters/stack/{name}/verify.md`).
 3. Mode: obey the user if stated; else probe `stack.code_roots` for the slice's artifacts —
    substantially none ⇒ `pre-impl`, else `audit`.
-4. State mode, adapters, and paths in one line before starting. One slice per run;
+4. If `kerbe.constraints` is set, append its lines verbatim to every extractor and
+   verifier prompt you dispatch. Constraints bound what agents may do to the environment
+   (e.g. no test commands); they never narrow what is searched.
+5. State mode, adapters, and paths in one line before starting. One slice per run;
    cross-slice observations go to the drop-file.
 
 ## Phase A — EXTRACT the promise ledger
