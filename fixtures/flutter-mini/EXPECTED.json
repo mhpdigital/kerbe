@@ -1,0 +1,10 @@
+{
+  "require": [
+    {"desc": "P1 unbuilt favorite button", "column": "code", "value": "absent", "match_re": "[Ff]avorite"},
+    {"desc": "P2 unregistered detail route", "column": "code", "value": "partial", "match_re": "detail"},
+    {"desc": "P3 undeclared logo asset", "column": "code", "value": "partial", "match_re": "logo"}
+  ],
+  "forbid": [
+    {"desc": "D1 dead code must not be counted", "any_re": "formatBytes"}
+  ]
+}

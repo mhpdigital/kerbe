@@ -1,0 +1,11 @@
+# kerbe config for the flutter-mini fixture.
+kerbe:
+  planning_root: planning/slices
+  promise_sources:
+    spec_globs: ["*.md"]
+    plan_glob: "*PLAN*.md"
+  design:
+    adapter: none
+  stack:
+    adapter: flutter
+    code_roots: ["lib/", "pubspec.yaml"]
