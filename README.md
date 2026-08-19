@@ -22,6 +22,15 @@ leaf-level promise per row), then VERIFY each row against the code with wiring e
 verdict is computed by `scripts/verdict.py` from the ledger; no agent ever asserts
 completeness. Design and spec: `docs/specs/2026-08-20-coverage-skill.md`.
 
+Usage: from a project with a `kerbe.yml` (copy `kerbe.yml.example`), run
+`/kerbe:coverage <slice>` — before implementing, it checks the plan tasks everything the
+design and spec promise (`pre-impl`); after, it checks everything promised is built and
+wired (`audit`).
+
+**Contributors:** any change to `skills/coverage/` or `adapters/` must pass the fixture
+gate in `fixtures/ACCEPTANCE.md` (planted gaps found, decoys uncounted, verdict stable
+across two runs) before it is used on a real project.
+
 ## Repository layout
 
 - `skills/` — the plugin skills (`skills/coverage/SKILL.md`, references, scripts)

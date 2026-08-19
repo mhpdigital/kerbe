@@ -623,6 +623,33 @@ the guard as `~/.claude/skills/sdlc-coverage/invocation-guard.py` registered in
 refused, naming the offending line. Then edit the stored block and dispatch the new text — it
 must be refused as a mid-loop change. Then dispatch the block verbatim — it must pass.
 
+### 1.6 Inventory-first supersession (2026-08-20)
+
+**The finding.** The full post-mortem of the frozen coverage skill (20 skill commits, 51
+loop commits, four session reconstructions, Jul 4 – Aug 19 2026) identified a root cause
+beneath §1.5: **the inventory of promises was never an artifact.** Each round re-derived
+"what was promised" inside its own context, so no two rounds provably searched the same
+space — the gap count measured the round's brief, model, and appetite, not the feature.
+Every §1.5-era mechanism (frozen invocation, dispatch guard, snapshot cache, model pinning,
+loop epochs, ledger-arithmetic rules) compensates for that one defect.
+
+**The supersession.** `kerbe:coverage` (built 2026-08-20, spec:
+`docs/specs/2026-08-20-coverage-skill.md`) removes the defect structurally instead of
+guarding it: EXTRACT a frozen, committed promise ledger (`PROMISES.md`, one leaf-level
+promise per row — the denominator), then VERIFY each row independently with wiring
+evidence; the verdict is computed by `skills/coverage/scripts/verdict.py`, never asserted
+by an agent. The §1.5 frozen-invocation guard is therefore **not ported**: the only loop
+left (extraction) is bounded by the source documents, and verification is idempotent
+per-row work with no convergence signal to protect.
+
+- [x] Spec, skill, references, design adapters (`figma`, `none`), stack adapters
+      (`symfony`, `flutter` drafted), `verdict.py`, portable `figma_cache.py`
+- [x] Fixture harness: `fixtures/symfony-mini` (6 planted gaps, 3 decoys) and
+      `fixtures/flutter-mini` (3 planted gaps, 1 decoy), golden ledgers, deterministic
+      `fixtures/score.py`
+- [ ] Gate every future change to `skills/coverage/` or `adapters/` through
+      `fixtures/ACCEPTANCE.md` — skill changes are never debugged on a live project
+
 **→ `sdlc-*` is now FROZEN. Everything below happens in `~/projects/kerbe/`.**
 
 ---
