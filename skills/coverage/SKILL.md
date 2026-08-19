@@ -80,8 +80,12 @@ the source documents, so a stop-when-nothing-new loop is safe **here and only he
    Fill `spec`/`plan`/`code` with `?` (or per obvious source: a design row's `spec` stays
    `?` until verified; a spec-originated row gets `spec: origin`).
 4. **Safety passes:** dispatch a fresh extractor over ALL sources with the same prompt.
-   Add whatever is new. Stop after **two consecutive passes that add zero rows**; cap at 5
-   passes total and record `EXTRACTION: capped` honestly if hit.
+   Add whatever is new. Stop after **two consecutive passes that add zero rows** — that is
+   the only stop condition, however many passes it takes; healthy discovery decays
+   (e.g. 240 → +22 → +5 → 0 → 0). A runaway backstop of **12 passes** exists solely to
+   halt a loop that never decays: hitting it means a source is moving or the granularity
+   rules are churning — record `EXTRACTION: capped (passes=12)`, say so, and never present
+   a capped ledger as a converged denominator.
 5. **Freeze:** set `STATUS: FROZEN`, record `EXTRACTION:` outcome, commit the ledger (and
    snapshot) to the planning repo. After this point rows are verified, corrected, or
    demoted — the denominator does not grow or shrink silently.
