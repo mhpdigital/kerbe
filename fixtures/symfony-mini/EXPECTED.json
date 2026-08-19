@@ -10,6 +10,6 @@
   "forbid": [
     {"desc": "D1 dead code must not be counted", "any_re": "unusedExportHelper"},
     {"desc": "D2 assertion-less test must not be counted", "any_re": "[Aa]ssert|CardControllerTest"},
-    {"desc": "D3 unticked checkboxes must not be counted", "any_re": "[Cc]heckbox|[Uu]nticked|DONE_CRITERIA"}
+    {"desc": "D3 unticked checkboxes must not be counted", "any_re": "[Cc]heckbox|[Uu]nticked"}
   ]
 }

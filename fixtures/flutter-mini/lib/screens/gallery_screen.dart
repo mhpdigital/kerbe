@@ -6,7 +6,10 @@ class GalleryScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Gallery')),
+      appBar: AppBar(
+        leading: Image.asset('images/logo.png'),
+        title: const Text('Gallery'),
+      ),
       body: GridView.count(
         crossAxisCount: 3,
         children: List.generate(

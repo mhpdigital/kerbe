@@ -41,6 +41,16 @@ Hard rules:
 - A row's status is **where the relay breaks**: `spec: GAP` = design↔spec hop broken;
   `plan: GAP` = spec↔plan broken; `code: absent`/`partial` = plan↔code broken. "Present but
   functionally missing" (stub, unwired, unimported) is always `partial`, never `present`.
+- **`origin` means the promise enters the relay at or upstream of this column.** A
+  plan-originated promise (`promised-by: plan:…`) therefore carries `spec: origin` —
+  `GAP` is only for a hop the relay should have carried the promise across and didn't
+  (`spec: GAP` = a *design-originated* promise no spec doc captures). A plan task with no
+  spec/design origin is a reverse-direction observation: note it in the drop-file (plan
+  invented scope, or the spec is behind), never as a `GAP`.
+- `absent` vs `partial`: `absent` = nothing of the promise exists; `partial` = something
+  exists but a link in its wiring chain is broken (stub, unregistered route, dead link,
+  unimported stylesheet, undeclared asset). When nothing exists at all, the row is
+  `absent` even if the plan names it.
 - Built-but-diverging-from-design (part of the promise undelivered) is `partial` with the
   divergence in evidence.
 
