@@ -1,0 +1,17 @@
+# kerbe.yml — project configuration for the kerbe skill suite.
+# Copy to the project root as kerbe.yml and adjust. Skills hard-stop without it.
+kerbe:
+  planning_root: planning/slices          # slice folders live at {planning_root}/{slice}
+  promise_sources:
+    spec_globs: ["*.md"]                  # spec docs in the slice folder; classified by content, not filename
+    plan_glob: "*PLAN*.md"                # the frozen task list; progress ledgers are never the plan
+  design:
+    adapter: figma                        # figma | none
+    cache_dir: design-cache               # snapshot dir, relative to the slice folder
+    file_key: "<figma-file-key>"          # required for adapter: figma
+    token_env: FIGMA_API_TOKEN            # env var holding the API token…
+    # token_cmd: "aws ssm get-parameter --name /<project>/figma/api-token --with-decryption --query Parameter.Value --output text"
+                                          # …or a shell command that prints it (token_env wins if both are set)
+  stack:
+    adapter: symfony                      # symfony | flutter
+    code_roots: ["symfony/"]              # where the slice's implementation lives, for mode auto-detect and verification
