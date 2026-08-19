@@ -1,0 +1,14 @@
+# kerbe config for the symfony-mini fixture.
+kerbe:
+  planning_root: planning/slices
+  promise_sources:
+    spec_globs: ["*.md"]
+    plan_glob: "*PLAN*.md"
+  design:
+    adapter: figma
+    cache_dir: design-cache        # snapshot is pre-supplied; never fetch (file_key FIXTURE has no token)
+    file_key: "FIXTURE"
+    token_env: FIGMA_API_TOKEN
+  stack:
+    adapter: symfony
+    code_roots: ["src/", "templates/", "assets/", "tests/"]

@@ -1,0 +1,12 @@
+{
+  "file_key": "FIXTURE",
+  "file_name": "cards-design",
+  "page": "Cards",
+  "figma_version": "fixture-1",
+  "figma_last_modified": "2026-08-20T00:00:00Z",
+  "fetched_utc": "2026-08-20T00:00:00+00:00",
+  "payload": "file.json",
+  "payload_note": "hand-authored fixture snapshot; no keys dropped",
+  "dropped_keys": [],
+  "pages": [{ "name": "Cards", "id": "0:1", "nodes": 10 }]
+}

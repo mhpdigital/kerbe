@@ -1,0 +1,9 @@
+{% extends 'base.html.twig' %}
+
+{% block body %}
+<h1>{{ card.title }}</h1>
+<div class="card-toolbar">
+    <a class="btn btn-secondary" href="/cards/export">Export as PDF</a>
+</div>
+<p class="card-description">{{ card.description }}</p>
+{% endblock %}

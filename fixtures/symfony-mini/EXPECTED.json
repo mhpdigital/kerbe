@@ -1,0 +1,15 @@
+{
+  "require": [
+    {"desc": "P1 unbuilt download row", "column": "code", "value": "absent", "match_re": "[Dd]ownload"},
+    {"desc": "P2 unspec'd filter chips", "column": "spec", "value": "GAP", "match_re": "[Ff]ilter chips"},
+    {"desc": "P3 unplanned share popup", "column": "plan", "value": "GAP", "match_re": "[Ss]hare"},
+    {"desc": "P4 dead export link", "column": "code", "value": "partial", "match_re": "[Ee]xport"},
+    {"desc": "P5 unimported hover stylesheet", "column": "code", "value": "partial", "match_re": "hover"},
+    {"desc": "P6 stub email receipt", "column": "code", "value": "partial", "match_re": "[Rr]eceipt"}
+  ],
+  "forbid": [
+    {"desc": "D1 dead code must not be counted", "any_re": "unusedExportHelper"},
+    {"desc": "D2 assertion-less test must not be counted", "any_re": "[Aa]ssert|CardControllerTest"},
+    {"desc": "D3 unticked checkboxes must not be counted", "any_re": "[Cc]heckbox|[Uu]nticked|DONE_CRITERIA"}
+  ]
+}
