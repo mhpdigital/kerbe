@@ -54,6 +54,17 @@ Any change to `skills/start/` or the adapter template sets reruns this before re
 4. Also confirm the run refused nothing it should create and created nothing it should
    omit beyond what check_start covers (read the agent's report).
 
+## kerbe:figma gate
+
+Any change to `skills/figma/` reruns before real use:
+
+1. `python3 -m unittest tests.test_figma_scripts` — token resolution, URL parsing, and
+   offline extraction against the symfony-mini snapshot (every leaf listed with node ids,
+   palette/font summaries present, unknown page errors with the page list).
+2. Live operations (`grade`, `fetch`, API extraction) cannot run against fixtures — they
+   are validated on the next real slice run and the result recorded below. That gap is
+   stated, not hidden.
+
 ## Recorded runs
 
 | Date | Fixture | Model | Result |

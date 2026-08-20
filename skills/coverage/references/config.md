@@ -21,6 +21,8 @@ The file is read by the agent (no YAML library involved); keep it simple and fla
 | `kerbe.design.file_key` | string | for figma | The design file key. Never assume a default. |
 | `kerbe.design.token_env` | string | one of the two | Env var holding the API token. Wins over `token_cmd` when both are set. |
 | `kerbe.design.token_cmd` | string | one of the two | Shell command that prints the token (e.g. a secrets-manager read). |
+| `kerbe.design.checklist` | path | optional | Project's design handoff checklist doc; `kerbe:figma grade` reports against it when set. |
+| `kerbe.design.freshness_cmd` | string | optional | Project command checking `@figma` tag coverage/staleness of built UI. When unset, `kerbe:figma` does the check manually and says the tooling is missing. |
 | `kerbe.stack.adapter` | `symfony` \| `flutter` | yes | Which `adapters/stack/<name>/verify.md` defines "present and wired". |
 | `kerbe.stack.code_roots` | list of paths | yes | Where the slice's implementation lives. Used for mode auto-detect (substantially no slice artifacts under these roots ⇒ pre-impl) and as the search space for verification. May contain `{slice}`, which interpolates the slice id — for projects where each slice's code lives in its own sibling worktree (e.g. `../<repo>-{slice}/src/`). Resolve it before use and verify the resulting path exists (and, when it is a git checkout, that it is on the slice's branch) — a missing or wrong-branch code root is a hard stop, not an `absent` verdict. |
 

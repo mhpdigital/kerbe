@@ -1,8 +1,8 @@
 {
   "name": "kerbe",
   "displayName": "Kerbe",
-  "description": "Portable slice-based SDLC skills with stack and design adapters. First skill: coverage — inventory-first missing-functionality review.",
-  "version": "0.1.2",
+  "description": "Portable slice-based SDLC skills with stack and design adapters. Skills: coverage (inventory-first missing-functionality review), start (open a slice), figma (the design leg).",
+  "version": "0.2.0",
   "author": { "name": "MHP Digital" },
   "license": "MIT",
   "homepage": "https://github.com/jochendaum/kerbe"
