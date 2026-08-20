@@ -37,6 +37,21 @@ harness doing its job. Never debug skill changes on a live project.
 `GOLDEN.md` in each fixture is a hand-authored correct ledger: it must always score clean
 (`score.py` exit 0) and is the reference for how rows should be written.
 
+## kerbe:start gate
+
+Any change to `skills/start/` or the adapter template sets reruns this before real use:
+
+1. Copy `symfony-mini` to a scratch dir. Dispatch a fresh subagent: read
+   `<repo>/skills/start/SKILL.md` and execute it on the scratch copy for a NEW slice id
+   (e.g. `orders`), telling it "the user has answered design_required: true — reason:
+   design-driven, frame exists" (subagents cannot use AskUserQuestion; the pre-supplied
+   answer stands in for it and must land verbatim in the SETTINGS Notes row).
+2. Score: `python3 fixtures/check_start.py <scratch> orders true` — exit 0 required.
+3. Repeat with `design_required: false` (fresh scratch, e.g. slice `cleanup`, reason "no
+   UI at all") and score with `false`.
+4. Also confirm the run refused nothing it should create and created nothing it should
+   omit beyond what check_start covers (read the agent's report).
+
 ## Recorded runs
 
 | Date | Fixture | Model | Result |

@@ -1,8 +1,9 @@
 # kerbe.yml — the config seam
 
-The skill body names no project path, doc filename, stack probe, or design-tool call. All of
-that resolves through `kerbe.yml` at the **target project root**. A missing `kerbe.yml` is a
-hard stop: tell the user to create one from `kerbe.yml.example` — never guess defaults.
+Shared by every kerbe skill (coverage, start, figma, …). No skill body names a project
+path, doc filename, stack probe, or design-tool call — all of that resolves through
+`kerbe.yml` at the **target project root**. A missing `kerbe.yml` is a hard stop: tell the
+user to create one from `kerbe.yml.example` — never guess defaults.
 
 The file is read by the agent (no YAML library involved); keep it simple and flat.
 
@@ -10,7 +11,9 @@ The file is read by the agent (no YAML library involved); keep it simple and fla
 
 | Key | Type | Required | Meaning |
 |---|---|---|---|
-| `kerbe.planning_root` | path | yes | Slice folders live at `{planning_root}/{slice}` relative to the project root. |
+| `kerbe.planning_root` | path | yes | Slice folders live at `{planning_root}/{slice}` relative to the project root; the slice registry is `{planning_root}/INDEX.md`. |
+| `kerbe.timezone` | IANA tz name | yes for start | Local timezone for `TIMING.md` lifecycle stamps (e.g. `Pacific/Auckland`). |
+| `kerbe.legacy_root` | path | optional | Root of a legacy system slices may migrate from. When set AND a legacy counterpart verifiably exists there, `kerbe:start` includes `IMPORT.md`/`CODEMAP.md`; when unset, those docs are omitted. |
 | `kerbe.promise_sources.spec_globs` | list of globs | yes | Spec docs inside the slice folder. Glob wide (`*.md`) and **classify by content, not filename** — new slices invent new doc names. Docs are read as the record of WHAT MUST EXIST, never audited for accuracy. |
 | `kerbe.promise_sources.plan_glob` | glob | yes | The frozen task list (union of matches). A mutable progress/execution ledger is never the plan — exclude it even when the glob matches it. No match ⇒ `plan: none-yet` rows (valid pre-impl state). |
 | `kerbe.design.adapter` | `figma` \| `none` | yes | Which file in `adapters/design/` governs the design leg. `none` ⇒ no design-sourced rows; `spec: n/a` becomes legal; ledger header records `design@n/a`. |

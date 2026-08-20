@@ -1,6 +1,7 @@
 # kerbe config for the flutter-mini fixture.
 kerbe:
   planning_root: planning/slices
+  timezone: Pacific/Auckland
   promise_sources:
     spec_globs: ["*.md"]
     plan_glob: "*PLAN*.md"
