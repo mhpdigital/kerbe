@@ -65,7 +65,11 @@ status. Nothing is created.
    If `design_required: false`, write `n/a (design_required: false)` in the "2. Design"
    row so a skipped step is distinguishable from one not yet run.
 7. Add the slice to `INDEX.md` with status `planning` and today's date.
-8. Report what was created, state the recorded `design_required` value back to the user
+8. When the config places the slice's code outside the project root (a `{slice}` code root,
+   or a `workspace.root` elsewhere), name the workspace path this slice's code will live in
+   — it does not exist yet and this skill never creates it, but the build session will need
+   access to both roots and this is where that becomes visible.
+9. Report what was created, state the recorded `design_required` value back to the user
    (it decides whether `/kerbe:figma` is mandatory next or skipped), and give the fill
    order: UI_ELEMENTS (leaf-level — one row per interactive leaf with node id; this is
    the granularity the coverage ledger will verify) → ENTITIES → ROUTES → SECURITY →

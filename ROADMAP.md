@@ -657,6 +657,54 @@ per-row work with no convergence signal to protect.
       off-screen). Add evidence-locality, action-chain, and state-transition recipe
       classes + fixture plants for each.
 
+### 1.7 Build leg ported (2026-08-20): `plan`, `implement`, `bug`
+
+Ported by copy from the frozen `sdlc-implementation-plan`, `sdlc-implement` and `sdlc-bug`,
+with the Phase-1 defects fixed **in Kerbe** rather than retrofitted into the frozen suite.
+
+- [x] **§1.2 superpowers dependency broken.** `skills/plan/references/plan-spec.md` is a
+      self-contained authoring spec (header, file-structure map, task right-sizing,
+      bite-sized TDD steps with real code and expected output, no-placeholder rules,
+      self-review). The delegation is now gated, not required: use
+      `superpowers:writing-plans` when installed, apply the two overrides, otherwise follow
+      the inline spec. Same treatment for the execution modes — `kerbe:implement` describes
+      the two shapes (chain / group) itself and names no external skill.
+- [x] **§1.3 CLAUDE.md rules inlined** in all three skills: pathspec-scoped commits *with
+      the why* (shared index across concurrent sessions), never `git add -A|.|*`, the
+      progress tracker as one visible git-tracked file, and an explicit override of any
+      sub-skill's dotfolder ledger convention.
+- [x] **§1.4 scoped-test blind spot closed at the lifecycle level.** The per-task gate in
+      `kerbe:implement` Step 5 and `kerbe:bug` Step 5 are stack-agnostic; the trigger list
+      ("global-effect artifacts") and the commands live in each stack adapter's
+      `commands.md`. Flutter records the schema asymmetry as **n/a** and supplies its own
+      instance of the same class (codegen, provider graph, router table, theme tokens).
+      Adapter authoring caution carried over verbatim: repair a blocked runner, never
+      document a bypass.
+- [x] **§2.1 harness neutrality.** No skill body names a dispatch mechanism; the grep guard
+      is now an executable test (`tests/test_portability.py`), not a habit.
+- [x] **§2.4 executor seam.** `adapters/executor/claude.md` (worktree isolation, effort
+      levels, output contract, limits — including "workers never write the tracker") and
+      `adapters/executor/inline.md` (every capability `n/a`, limits stated aloud). The
+      MiniMax provider block from `sdlc-implement` is generalised to a provider-routing
+      paragraph with the token resolved through the same env-or-command seam the design leg
+      uses — no literal token path in the plugin.
+- [x] **Config seam widened:** `workspace.*` (root/prefix/branch prefixes/base/planning
+      branch/tracker/setup commands), `stack.exec`, `executor.*`. `workspace.root` unset is
+      a first-class topology — planning in its own repo with sibling code checkouts, which
+      is what the reference project actually runs.
+- [x] **Gates:** `fixtures/check_plan.py`, `fixtures/check_progress.py`,
+      `tests/test_portability.py` (harness neutrality + adapter parity: every stack declares
+      every command capability and impact kind, supported or `n/a`), and three new sections
+      in `fixtures/ACCEPTANCE.md`.
+- [ ] Run the three subagent fixture gates (plan design-gate stop, plan authoring,
+      implement tracker dry run) and record them.
+- [ ] Validate on first real use: the implement per-task full-suite refusal, and the bug
+      impact table produced before any fix diff.
+- [ ] **New in Kerbe, not in the source skills:** remediation mode (`kerbe:plan` writes
+      `FIX_PLAN.md`; `kerbe:implement` builds from a coverage fix list with the frozen ledger
+      as the denominator and `verdict.py` as the exit condition). It closes the loop
+      coverage opens — validate it on the first real remediation run.
+
 **→ `sdlc-*` is now FROZEN. Everything below happens in `~/projects/kerbe/`.**
 
 ---

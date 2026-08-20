@@ -47,8 +47,9 @@ stylesheet, class mismatch — **is** in scope: that is how a feature ships as a
    (`adapters/design/{name}.md`) and stack adapter (`adapters/stack/{name}/verify.md`).
 3. Mode: obey the user if stated; else probe `stack.code_roots` for the slice's artifacts —
    substantially none ⇒ `pre-impl`, else `audit`.
-4. If `kerbe.constraints` is set, append its lines verbatim to every extractor and
-   verifier prompt you dispatch. Constraints bound what agents may do to the environment
+4. If `kerbe.constraints` is set — plus `kerbe.constraints_by_skill.coverage` when
+   present — append those lines verbatim to every extractor and verifier prompt you
+   dispatch. Constraints bound what agents may do to the environment
    (e.g. no test commands); they never narrow what is searched.
 5. State mode, adapters, and paths in one line before starting. One slice per run;
    cross-slice observations go to the drop-file.

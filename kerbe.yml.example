@@ -16,6 +16,26 @@ kerbe:
                                           # …or a shell command that prints it (token_env wins if both are set)
   stack:
     adapter: symfony                      # symfony | flutter
-    code_roots: ["symfony/"]              # where the slice's implementation lives, for mode auto-detect and verification
-  constraints: []                         # environment rules that hold for EVERY dispatch, e.g.
-    # - "do not run any test command — the test database is shared"
+    code_roots: ["symfony/"]           # where the slice's implementation lives; may contain {slice}
+    # exec: "docker exec <container> bash -c 'cd /var/www/html/symfony && {cmd}'"
+                                          # optional wrapper for every adapter command ({cmd} is substituted)
+  workspace:                              # where implementation happens (kerbe:implement, kerbe:bug)
+    root: ~/projects                      # parent dir for slice worktrees; omit ⇒ no worktree is created and
+                                          #   the resolved stack.code_roots entry IS the workspace
+    prefix: <project>-                    # worktree path = {root}/{prefix}{slice}
+    branch_prefix: slice/                 # feature branch = {branch_prefix}{slice}
+    review_prefix: review/                # a {review_prefix}{slice} worktree supersedes the slice one
+    base_branch: origin/review/main       # branch a fresh slice branch is cut from
+    # planning_branch: review/planning     # ONLY when planning docs live in the code repo on another branch;
+                                          #   omit when the planning root is its own repository
+    progress_file: claude-progress.md     # live per-workspace tracker; never a hidden dotfolder
+    setup_cmds: []                        # commands run once after creating a workspace (env/DB standup), e.g.
+      # - "docker compose up -d"
+  executor:
+    adapter: claude                       # adapters/executor/<name>.md — how a task worker is dispatched
+    routing: {}                           # optional task-class overrides, e.g. {business-logic: claude@standard}
+  constraints: []                         # environment rules that hold for EVERY skill's dispatches, e.g.
+    # - "never run a destructive database command"
+  constraints_by_skill: {}                # rules that hold for ONE skill only, e.g.
+    # coverage:
+    #   - "do not modify application code or docs; this is a report-only review"

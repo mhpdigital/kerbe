@@ -65,6 +65,56 @@ Any change to `skills/figma/` reruns before real use:
    are validated on the next real slice run and the result recorded below. That gap is
    stated, not hidden.
 
+## kerbe:plan gate
+
+Any change to `skills/plan/` (SKILL.md or `references/plan-spec.md`) reruns this before
+real use:
+
+1. `python3 -m unittest tests.test_check_plan tests.test_portability` — structural checker
+   and the portability invariants (no harness mechanism in a skill body, no hardcoded
+   project path).
+2. Copy `symfony-mini` to a scratch dir. The fixture slice deliberately ships **no**
+   `SETTINGS.md`: dispatch a fresh subagent to read `<repo>/skills/plan/SKILL.md` and run it
+   on the scratch slice `cards`. It must **STOP at the design gate** and say the slice never
+   answered the design question. A run that proceeds — or defaults `design_required` to
+   false — is a gate failure, and the wording needs fixing.
+3. In the scratch copy only, write `SETTINGS.md` with `design_required: true` and a dated
+   Notes reason, and re-dispatch. It must now demand the Design-sources block, find it
+   populated in `UI_ELEMENTS.md`, and write `planning/slices/cards/PLAN.md` (overwriting the
+   fixture's plan in the scratch copy is expected — this is a plan-authoring run, not a
+   coverage run).
+4. Score: `python3 fixtures/check_plan.py <scratch>/planning/slices/cards/PLAN.md true` —
+   exit 0 required.
+5. Read the report: the plan's Global Constraints must quote the stack adapter's
+   `commands.md` full-suite trigger, and every UI task must carry `node=… measured=…`.
+
+## kerbe:implement gate
+
+Any change to `skills/implement/` reruns this before real use. Implementation itself cannot
+run against a fixture (it needs a real toolchain and a real git workspace), so the gate
+covers the two things that are checkable offline and the rest is stated as a gap:
+
+1. `python3 -m unittest tests.test_check_progress tests.test_portability`.
+2. **Tracker derivation, dry run.** Copy `symfony-mini` to a scratch dir and dispatch a
+   fresh subagent: read `<repo>/skills/implement/SKILL.md`, execute Steps 0–3 **only**
+   (resolve the workspace, derive the tracker, choose the execution shape) against the
+   scratch copy with `workspace.root` unset, and dispatch nothing. Score:
+   `python3 fixtures/check_progress.py <scratch>/claude-progress.md <scratch>/planning/slices/cards/PLAN.md`
+   — exit 0 required, and the report must name the execution shape (chain vs group) with the
+   plan evidence for it.
+3. **The per-task gate is the part that matters most and cannot be fixture-tested.** It is
+   validated on the first real slice run: a task touching a global-effect artifact must be
+   refused as done until the full-suite output is pasted. Record the result below.
+
+## kerbe:bug gate
+
+1. `python3 -m unittest tests.test_portability` — every stack adapter's `impact.md` covers
+   every artifact kind (recipe or explicit n/a).
+2. The impact analysis itself is validated on the first real bug: the run must produce the
+   check table **before** any fix diff, and the commit must be pathspec-scoped with a
+   root-cause message. Record the result below. This gap is stated, not hidden — the same
+   standing as `kerbe:figma`'s live operations.
+
 ## Recorded runs
 
 | Date | Fixture | Model | Result |
@@ -74,3 +124,5 @@ Any change to `skills/figma/` reruns before real use:
 | 2026-08-20 | start gate: symfony-mini scratch × 2 (orders/true, cleanup/false) | sonnet | PASS — 15/15 and 14/14 checks; correct tailoring (infra slice omitted ENTITIES/ROUTES, dropped Panther section, Design row n/a); the false run exposed that check_start.py demanded all stack docs unconditionally — checker gained a per-run expected-docs arg (the run was right, the checker was wrong) |
 | 2026-08-20 | (no run) extraction backstop 5 → 12 passes | — | Documented exception, no gate run: the stop condition (two consecutive zero-new passes) is unchanged; only the runaway backstop moved, and both fixtures converge at 3 passes, so the number is unreachable there. Motivated by the first real run (subscription): healthy decay 240 → +22 → +5 needs 6–7 passes and would have been falsely capped at 5. |
 | 2026-08-20 | both (gate for constraints seam + slash-only frontmatter) | sonnet | PASS after two wording pins the gate itself surfaced: (1) a planned deliverable is ALWAYS a ledger row — one flutter run had dropped a plan-originated finding to the drop-file; (2) every hop is checked against the promise — GAP upstream never blanks downstream cells. Post-pin: flutter pair 4/4 byte-identical; symfony 3 runs 9/9 each, identical finding sets (leaf granularity varied 8–10 rows as documented). score.py forbid now matches the promise cell only — evidence may cite decoys as context. |
+| 2026-08-20 | — (offline gates only) | — | kerbe:plan / kerbe:implement / kerbe:bug ported. Deterministic gates PASS: 52 unit tests green (`check_plan`, `check_progress`, portability invariants — harness-neutrality grep clean, both stack adapters declare every command capability and impact kind). **Pending, stated:** the three subagent fixture runs above (plan design-gate stop + authoring, implement tracker dry run) and the two first-real-run validations (implement per-task full-suite gate, bug impact table). |
+| 2026-08-20 | first real run: `kerbe:bug` × 6 blockers (subscription) | opus | **PASS on the method, one gap found.** Impact analysis held across all six: R1-04's table found a second unattached-card site (`setDefault`) the report never mentioned, R1-01's tests followed the link rather than asserting a route name, R1-03 distinguished a scheduled cancel from a lapsed one. Commit discipline held — four pathspec-scoped commits with root-cause bodies, three entangled defects on one path deliberately committed together. **Gap: every commit cited per-file evidence (17/17, 19/19, 21/21 in the file) and no full-suite run.** The diffs changed `SubscriptionLifecycle::reactivate()` and `SubscriptionPlanRepository`, both consumed well outside the diff, yet the Symfony global-effect list is artifact-shaped (entity/migration/config/fixtures) and did not name them. Adapter hardened with a behavioural row (callers outside the diff, grep before deciding). |

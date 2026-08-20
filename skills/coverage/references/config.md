@@ -25,14 +25,27 @@ The file is read by the agent (no YAML library involved); keep it simple and fla
 | `kerbe.design.freshness_cmd` | string | optional | Project command checking `@figma` tag coverage/staleness of built UI. When unset, `kerbe:figma` does the check manually and says the tooling is missing. |
 | `kerbe.stack.adapter` | `symfony` \| `flutter` | yes | Which `adapters/stack/<name>/verify.md` defines "present and wired". |
 | `kerbe.stack.code_roots` | list of paths | yes | Where the slice's implementation lives. Used for mode auto-detect (substantially no slice artifacts under these roots ⇒ pre-impl) and as the search space for verification. May contain `{slice}`, which interpolates the slice id — for projects where each slice's code lives in its own sibling worktree (e.g. `../<repo>-{slice}/src/`). Resolve it before use and verify the resulting path exists (and, when it is a git checkout, that it is on the slice's branch) — a missing or wrong-branch code root is a hard stop, not an `absent` verdict. |
-
-| `kerbe.constraints` | list of strings | optional | Environment rules that hold for **every** dispatch this skill makes (e.g. "do not run any test command — the test database is shared"). The skill appends them verbatim to every extractor/verifier prompt. Constraints state what agents must not do to the environment; they never narrow what is searched. |
+| `kerbe.stack.exec` | command template | optional | Wrapper for every command an adapter's `commands.md` defines — `{cmd}` is substituted, and `{slice}` interpolates like it does in `code_roots` (e.g. a per-slice container exec). Unset ⇒ commands run directly in the workspace. |
+| `kerbe.workspace.root` | path | for implement/bug | Parent directory for slice workspaces; the workspace is `{root}/{prefix}{slice}`. **Unset ⇒ no worktree is created**: the resolved `stack.code_roots` entry is the workspace, and the skill never runs `git worktree add`. |
+| `kerbe.workspace.prefix` | string | with `root` | Workspace directory prefix (keeps sibling slice checkouts distinguishable). |
+| `kerbe.workspace.branch_prefix` | string | for implement/bug | Feature-branch prefix; the slice branch is `{branch_prefix}{slice}`. |
+| `kerbe.workspace.review_prefix` | string | optional | Integration-branch prefix. A `{review_prefix}{slice}` workspace **supersedes** the slice one — it has already absorbed it. |
+| `kerbe.workspace.base_branch` | branch | for implement | Branch a fresh slice branch is cut from when neither workspace exists. A base named in `PLAN.md`'s Global Constraints wins over this. |
+| `kerbe.workspace.planning_branch` | branch | optional | Set **only** when the planning root lives in the code repo on another branch — the slice folder is then materialised into the workspace from it. Omit when planning is its own repository (nothing to materialise). |
+| `kerbe.workspace.progress_file` | filename | optional | Live tracker written at the workspace root (default `claude-progress.md`). Never a hidden dotfolder — see the rule in `kerbe:implement`. |
+| `kerbe.workspace.setup_cmds` | list of strings | optional | Commands run **once**, after a workspace is created, to stand its environment up (containers, database, seed data). Never re-run on an existing workspace without saying so. |
+| `kerbe.executor.adapter` | `claude` \| `inline` | for implement | Which file in `adapters/executor/` supplies the dispatch mechanism. Skill bodies state worker *intent* only; the adapter owns the tool call. |
+| `kerbe.executor.routing` | map | optional | Task-class overrides, `task-class: executor@effort` (e.g. `test-authoring: claude@deep`). A route records task class + executor + effort — never a bare vendor name. |
+| `kerbe.constraints` | list of strings | optional | Environment rules that hold for **every** skill and every dispatch it makes (e.g. "never run a destructive database command"). Appended verbatim to every worker prompt. Constraints state what agents must not do to the environment; they never narrow what is searched. |
+| `kerbe.constraints_by_skill` | map skill → list | optional | Constraints that hold for **one** skill only. A review-only rule ("do not modify application code") belongs here under `coverage`, never in the global list — `implement` and `bug` exist to change code, and a global rule forbidding it either blocks them or gets silently ignored, which is worse. |
 
 ## Resolution rules
 
 1. `kerbe.yml` is read from the root of the target project (the repo the slice belongs to).
 2. Adapter names resolve to files shipped with the plugin: `adapters/design/{name}.md`,
-   `adapters/stack/{name}/verify.md`. An unknown name is a hard stop naming the valid options.
+   `adapters/stack/{name}/{verify,commands,impact}.md`, `adapters/executor/{name}.md`. An
+   unknown name is a hard stop naming the valid options. A capability an adapter declares
+   `n/a` is **skipped and said aloud**, never silently substituted with another stack's.
 3. Relative paths in the config are relative to the project root, except `design.cache_dir`,
    which is relative to the slice folder.
 4. When a recipe cannot run because a configured path is missing, the affected rows stay `?`
