@@ -1,23 +1,29 @@
 #!/usr/bin/env python3
 """Deterministic acceptance checks for kerbe:start output.
 
-usage: check_start.py <project_root> <slice-id> <true|false>
+usage: check_start.py <project_root> <slice-id> <true|false> [stack-docs]
 
-Third arg is the design_required answer the run was given. Prints PASS/FAIL per
-check; exit 0 = all pass.
+Third arg is the design_required answer the run was given. Optional fourth arg
+is the comma-separated stack-doc set the slice's tailoring should have produced
+(default: ENTITIES.md,ROUTES.md,SECURITY.md,DONE_CRITERIA.md) — an infra slice
+legitimately omits ENTITIES/ROUTES, so the gate names what it expects per run.
+Docs outside the expected set must NOT exist. Prints PASS/FAIL per check;
+exit 0 = all pass.
 """
 import pathlib
 import re
 import sys
 
-DATE_RE = re.compile(r"\d{4}-\d{2}-\d{2}")
+ALL_STACK_DOCS = ("ENTITIES.md", "ROUTES.md", "SECURITY.md", "DONE_CRITERIA.md")
 
 
 def main(argv):
-    if len(argv) != 4 or argv[3] not in ("true", "false"):
-        print("usage: check_start.py <project_root> <slice-id> <true|false>", file=sys.stderr)
+    if len(argv) not in (4, 5) or argv[3] not in ("true", "false"):
+        print("usage: check_start.py <project_root> <slice-id> <true|false> [stack-docs]",
+              file=sys.stderr)
         return 1
     root, slice_id, design = pathlib.Path(argv[1]), argv[2], argv[3]
+    stack_docs = tuple(argv[4].split(",")) if len(argv) == 5 else ALL_STACK_DOCS
     slice_dir = root / "planning" / "slices" / slice_id
     checks, failures = [], 0
 
@@ -47,9 +53,11 @@ def main(argv):
     else:
         check("UI_ELEMENTS.md omitted (design_required false)", not ui.exists())
 
-    for doc in ("REQUIREMENTS.md", "ENTITIES.md", "ROUTES.md", "SECURITY.md",
-                "DONE_CRITERIA.md", "TIMING.md"):
+    for doc in ("REQUIREMENTS.md", "TIMING.md") + stack_docs:
         check(doc + " exists", (slice_dir / doc).exists())
+    for doc in ALL_STACK_DOCS:
+        if doc not in stack_docs:
+            check(doc + " omitted (tailoring)", not (slice_dir / doc).exists())
 
     timing = slice_dir / "TIMING.md"
     t = timing.read_text() if timing.exists() else ""

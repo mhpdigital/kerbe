@@ -59,9 +59,11 @@ def build(design="true", omit=()):
     return root
 
 
-def run(root, design="true"):
-    return subprocess.run([sys.executable, str(SCRIPT), str(root), "demo", design],
-                          capture_output=True, text=True)
+def run(root, design="true", docs=None):
+    cmd = [sys.executable, str(SCRIPT), str(root), "demo", design]
+    if docs:
+        cmd.append(docs)
+    return subprocess.run(cmd, capture_output=True, text=True)
 
 
 class CheckStartTest(unittest.TestCase):
@@ -84,6 +86,18 @@ class CheckStartTest(unittest.TestCase):
         r = run(root, "false")
         self.assertEqual(r.returncode, 1)
         self.assertIn("UI_ELEMENTS.md omitted", r.stdout)
+
+    def test_infra_tailoring_passes_with_named_docs(self):
+        root = build("false", omit=("ENTITIES.md", "ROUTES.md"))
+        r = run(root, "false", "SECURITY.md,DONE_CRITERIA.md")
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertIn("ENTITIES.md omitted (tailoring)", r.stdout)
+
+    def test_unexpected_stack_doc_fails(self):
+        root = build("false")  # has ENTITIES.md, but the run expected it omitted
+        r = run(root, "false", "SECURITY.md,DONE_CRITERIA.md")
+        self.assertEqual(r.returncode, 1)
+        self.assertIn("FAIL ENTITIES.md omitted", r.stdout)
 
     def test_unstamped_timing_fails(self):
         root = build("true")

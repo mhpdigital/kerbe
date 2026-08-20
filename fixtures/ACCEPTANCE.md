@@ -48,7 +48,9 @@ Any change to `skills/start/` or the adapter template sets reruns this before re
    answer stands in for it and must land verbatim in the SETTINGS Notes row).
 2. Score: `python3 fixtures/check_start.py <scratch> orders true` — exit 0 required.
 3. Repeat with `design_required: false` (fresh scratch, e.g. slice `cleanup`, reason "no
-   UI at all") and score with `false`.
+   UI at all") and score with `false SECURITY.md,DONE_CRITERIA.md` — the optional fourth
+   arg names the stack docs the slice's tailoring should produce (an infra slice omits
+   ENTITIES/ROUTES); docs outside the named set must not exist.
 4. Also confirm the run refused nothing it should create and created nothing it should
    omit beyond what check_start covers (read the agent's report).
 
@@ -58,5 +60,6 @@ Any change to `skills/start/` or the adapter template sets reruns this before re
 |---|---|---|---|
 | 2026-08-20 | symfony-mini | sonnet | PASS — 9/9 checks on both runs; gap portion identical (6 open: download row, filter chips, share popup, dead export link, unimported hover, receipt stub); promise total varied 10 vs 8 (present-row granularity, see criterion above) |
 | 2026-08-20 | flutter-mini | sonnet | PASS after harness fix — first run exposed two plants authored `absent` while EXPECTED said `partial` (fixture corrected: unrouted detail screen, undeclared Image.asset; `origin` semantics tightened in ledger.md); two post-fix runs 4/4 checks, verdict blocks byte-identical |
+| 2026-08-20 | start gate: symfony-mini scratch × 2 (orders/true, cleanup/false) | sonnet | PASS — 15/15 and 14/14 checks; correct tailoring (infra slice omitted ENTITIES/ROUTES, dropped Panther section, Design row n/a); the false run exposed that check_start.py demanded all stack docs unconditionally — checker gained a per-run expected-docs arg (the run was right, the checker was wrong) |
 | 2026-08-20 | (no run) extraction backstop 5 → 12 passes | — | Documented exception, no gate run: the stop condition (two consecutive zero-new passes) is unchanged; only the runaway backstop moved, and both fixtures converge at 3 passes, so the number is unreachable there. Motivated by the first real run (subscription): healthy decay 240 → +22 → +5 needs 6–7 passes and would have been falsely capped at 5. |
 | 2026-08-20 | both (gate for constraints seam + slash-only frontmatter) | sonnet | PASS after two wording pins the gate itself surfaced: (1) a planned deliverable is ALWAYS a ledger row — one flutter run had dropped a plan-originated finding to the drop-file; (2) every hop is checked against the promise — GAP upstream never blanks downstream cells. Post-pin: flutter pair 4/4 byte-identical; symfony 3 runs 9/9 each, identical finding sets (leaf granularity varied 8–10 rows as documented). score.py forbid now matches the promise cell only — evidence may cite decoys as context. |
