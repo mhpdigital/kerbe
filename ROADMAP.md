@@ -649,6 +649,13 @@ per-row work with no convergence signal to protect.
       `fixtures/score.py`
 - [ ] Gate every future change to `skills/coverage/` or `adapters/` through
       `fixtures/ACCEPTANCE.md` — skill changes are never debugged on a live project
+- [ ] **Recipe hardening after the first blind validation** (see
+      `docs/validation/2026-08-20-subscription-comparison.md`): the run reproduced the
+      old loop's design-leaf findings and added 17 new ones, but missed 4–5 blockers of a
+      single class — static presence verified, runtime workability never followed one hop
+      (CTA→role-gated route, cancel→state the reactivate guard rejects, evidence cited
+      off-screen). Add evidence-locality, action-chain, and state-transition recipe
+      classes + fixture plants for each.
 
 **→ `sdlc-*` is now FROZEN. Everything below happens in `~/projects/kerbe/`.**
 
