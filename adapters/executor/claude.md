@@ -78,6 +78,14 @@ markers:
 - a progress-file convention in the user's instructions (e.g. autonomous mode triggered by
   the tracker existing at the project root) applies to the whole run — honour it from the
   first task, not from the point where someone notices.
+- **the guard attaches to the harness, not the model.** A Stop-hook enforcing these markers
+  runs client-side against the local transcript, so swapping the model provider under
+  Claude Code (an Anthropic-compatible endpoint via `ANTHROPIC_BASE_URL` — see Provider
+  routing below) inherits it for free; only swapping the *harness* costs anything. Workers
+  never fire the session Stop event at all — a worker ending is a subagent event, and its
+  contract is enforced by the orchestrator reading the report, per the output contract.
+  Expect a cheaper routed model to trip a marker guard more often than a frontier one; that
+  is the guard working, not misconfiguration.
 
 ## Output contract
 
