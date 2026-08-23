@@ -58,6 +58,27 @@ is survivable when someone is watching and fatal to an unattended run, which sta
 first prompt with half its work done. Resolve every root the run needs before dispatching
 anything, and name the exact path to grant rather than working around the gap.
 
+## Session signals for unattended runs
+
+Claude Code sessions are often run under an outer loop (the user's harness automation)
+that reads the session's **last line** to decide what happens next. The convention lives
+in the user's instructions, not here — commonly a pair of sentinels such as
+`<task-complete/>` (everything done, tests green, nothing open) and `<waiting-for-user/>`
+(stopped on input the user must provide). When the session's user instructions define such
+markers:
+
+- the **orchestrator** emits them — exactly one, on its own line, as the very last output
+  of the turn that stops. Workers never emit them; a worker's report is data, not a
+  session signal.
+- the *complete* marker is a verified claim: every task done, evidence recorded, tests
+  green. Emitting it over open tasks or failing tests defeats the automation it feeds.
+- the *waiting* marker means "nothing unblocked remains and a human decision is needed" —
+  not "I have a question mid-run". Work everything workable first, then stop once with
+  all the questions together.
+- a progress-file convention in the user's instructions (e.g. autonomous mode triggered by
+  the tracker existing at the project root) applies to the whole run — honour it from the
+  first task, not from the point where someone notices.
+
 ## Output contract
 
 The worker's final message is its completion report and must carry: what it changed

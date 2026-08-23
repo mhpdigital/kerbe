@@ -136,6 +136,9 @@ findings it closed and which it did not.
 ## Rules
 
 - Analysis before code. The fix is written once, after the table exists.
+- When working a fix list, run to completion: a blocked item is recorded and stepped
+  around, never retried in a loop and never a reason to pause the whole run and ask —
+  questions for the user are collected and asked once, when nothing workable remains.
 - A check that cannot run is reported, never assumed clean.
 - Never widen the fix into a refactor: everything in the commit traces to the root cause.
 - Any change to this skill must pass the bug gate in `fixtures/ACCEPTANCE.md` before it is

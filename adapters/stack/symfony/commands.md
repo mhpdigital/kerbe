@@ -6,7 +6,7 @@ names a container, a project, or a path outside the app root — that belongs in
 
 | Capability | Command |
 |---|---|
-| full test suite | `php vendor/bin/phpunit` |
+| full test suite | `php vendor/bin/phpunit` — but see **Which suite is the gate** below when the project defines more than one |
 | single test file | `php vendor/bin/phpunit <path>` |
 | single test | `php vendor/bin/phpunit --filter <TestName>` |
 | static analysis | `php vendor/bin/phpstan analyse` *(when the project configures it)* |
@@ -41,6 +41,22 @@ and `kerbe:bug`'s validation step both require the full suite plus schema valida
   than one and the effect surfaces in files this task never opened. This row is the
   behavioural sibling of the artifact rows above — a class list alone lets a shared service
   through on per-file evidence.
+
+## Which suite is the gate
+
+When `phpunit.dist.xml` defines several testsuites, a bare `php vendor/bin/phpunit` runs
+**all** of them, including any browser/e2e suite the project deliberately keeps out of the
+everyday run. Read the config before quoting a command:
+
+- the **gate** is the suite that runs everywhere without external prerequisites, named
+  explicitly: `php vendor/bin/phpunit --testsuite '<name>'`
+- a browser/e2e suite is a **separate** claim with its own prerequisites (a working driver,
+  seeded reference data). It is reported separately, never folded into the no-regression
+  number, and never silently dropped either
+
+Getting this wrong reads as a regression in both directions: run everything and a missing
+ChromeDriver looks like broken code; run the default and an e2e failure never surfaces at
+all. Name the suite, and say which one the evidence covers.
 
 ## Repair, never bypass
 

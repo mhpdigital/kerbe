@@ -124,6 +124,36 @@ owns, no two workers own the same file, a template and the styles and controller
 belong to one worker, and end-to-end browser tests always come last, after the features
 they exercise work.
 
+## Run to completion — the session does not pause
+
+An implementation run is dispatched to finish, not to narrate. Between tasks there is no
+"should I continue?", no progress summary addressed to the user, no confirmation request —
+the user asked for the plan to be executed, so execute it. The tracker is the narration.
+
+**Rulings, not stalls.** Ambiguities, plan defects, conflicts between a finding and the
+plan text — decide them and keep going. The spec is the binding authority, the plan is its
+argument, and your judgment settles what neither answers. Record every such decision in the
+tracker as a Ruling: what you decided, why, and what it costs if wrong. A wrong ruling
+costs rework the user can see and undo; a session parked on a question costs the whole run.
+
+**A blocked subtask is noted and stepped around, never retried in a loop.** Record it in
+the tracker where it happened, move to the next unblocked task, and keep working until
+nothing unblocked remains.
+
+**Only these stop the session mid-run:** an irreversible or destructive operation; a
+security-sensitive action; a side effect beyond the workspace that norms say to ask about
+first (a merge, a push to a shared branch, a publish); a decision that is genuinely the
+user's (scope, sequencing between slices, dropping a promise); or a plan so broken that
+every path forward is a guess.
+
+**Ending the run.** When the session's user instructions define end-of-run markers for
+unattended operation (see the executor adapter's session-signals section), emit exactly
+one, on its own line, as the last thing: the *waiting* marker when stopped on a user
+decision — with the open questions and every unblocked task already worked; the *complete*
+marker only when every task is done, the full-suite evidence is in the tracker, and
+nothing is left open. Never the complete marker over failing tests or unfinished tasks,
+and never neither — a run that just trails off strands the automation watching it.
+
 ## Step 4 — dispatch
 
 Per the executor adapter, one worker per task, with a **self-contained** brief:
@@ -211,5 +241,7 @@ rather than a plan:
   anything you did not stage alone.
 - Never add features the plan does not call for. An improvement noticed mid-task is a note
   in the tracker, not a diff.
+- The session runs to completion per **Run to completion** above — questions the user must
+  answer are collected and asked once, at the stop, not sprinkled through the run.
 - Any change to this skill or its references must pass the implement gate in
   `fixtures/ACCEPTANCE.md` before it is used on a real project.
