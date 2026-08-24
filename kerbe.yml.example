@@ -3,6 +3,9 @@
 kerbe:
   planning_root: planning/slices          # slice folders live at {planning_root}/{slice}; registry at {planning_root}/INDEX.md
   timezone: Pacific/Auckland              # local timezone for TIMING.md lifecycle stamps
+  # editor_cmd: "phpstorm --line {line} {file}"
+                                          # optional: per-finding open command for reviews ({file} is absolute);
+                                          #   unset ⇒ reviews print clickable file:line references instead
   # legacy_root: ../legacy-app            # optional: old system a slice may migrate from (enables IMPORT/CODEMAP docs)
   promise_sources:
     spec_globs: ["*.md"]                  # spec docs in the slice folder; classified by content, not filename

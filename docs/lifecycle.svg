@@ -61,11 +61,11 @@
 <rect x="455" y="1717" width="330" height="60" rx="7" fill="#fff4e5" stroke="#bc4c00" stroke-width="1.5"/>
 <text x="620.0" y="1743" text-anchor="middle" class="nb" fill="#24292f">verdict.py</text>
 <text x="620.0" y="1760" text-anchor="middle" class="n" fill="#24292f">computed, never asserted</text>
-<rect x="455" y="1823" width="330" height="94" rx="7" fill="#eef3fb" stroke="#1f6feb" stroke-width="1.5" stroke-dasharray="6 4"/>
-<text x="620.0" y="1849" text-anchor="middle" class="nb" fill="#0b3a80">kerbe:review  (planned — sdlc-code-review today)</text>
-<text x="620.0" y="1866" text-anchor="middle" class="n" fill="#0b3a80">risk-tier the diff · tier 1 read line by line</text>
-<text x="620.0" y="1883" text-anchor="middle" class="n" fill="#0b3a80">tier 3 trusted only behind a FULL-suite run</text>
-<text x="620.0" y="1900" text-anchor="middle" class="n" fill="#0b3a80">adversarial pass · recorded as QR-n in REVIEW.md</text>
+<rect x="455" y="1823" width="330" height="94" rx="7" fill="#1f6feb" stroke="#0b3a80" stroke-width="1.5"/>
+<text x="620.0" y="1849" text-anchor="middle" class="nb" fill="#ffffff">kerbe:review</text>
+<text x="620.0" y="1866" text-anchor="middle" class="n" fill="#ffffff">risk-tier the diff · tier 1 read line by line</text>
+<text x="620.0" y="1883" text-anchor="middle" class="n" fill="#ffffff">tier 3 trusted only behind a FULL-suite run</text>
+<text x="620.0" y="1900" text-anchor="middle" class="n" fill="#ffffff">adversarial pass · recorded as QR-n in REVIEW.md</text>
 <rect x="455" y="1963" width="330" height="43" rx="7" fill="#2da44e" stroke="#1a7f37" stroke-width="1.5"/>
 <text x="620.0" y="1989" text-anchor="middle" class="nb" fill="#ffffff">Slice FINISHED · merge → INDEX: done</text>
 <rect x="70" y="2052" width="300" height="60" rx="7" fill="#f6f8fa" stroke="#57606a" stroke-width="1.5"/>

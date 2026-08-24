@@ -53,7 +53,7 @@ NODES = [
     ("COVAUD",  "spine", "skill",   13, ["kerbe:coverage — audit", "EXTRACT the ledger, then VERIFY every row"]),
     ("LEDGER",  "spine", "artifact",14, ["PROMISES.md — FROZEN", "one row per leaf promise · the denominator"]),
     ("VERDICT", "spine", "gate",    15, ["verdict.py", "computed, never asserted"]),
-    ("REVIEW",  "spine", "planned", 16, ["kerbe:review  (planned — sdlc-code-review today)", "risk-tier the diff · tier 1 read line by line", "tier 3 trusted only behind a FULL-suite run", "adversarial pass · recorded as QR-n in REVIEW.md"]),
+    ("REVIEW",  "spine", "skill",   16, ["kerbe:review", "risk-tier the diff · tier 1 read line by line", "tier 3 trusted only behind a FULL-suite run", "adversarial pass · recorded as QR-n in REVIEW.md"]),
     ("DONE",    "spine", "done",    17, ["Slice FINISHED · merge → INDEX: done"]),
     ("REPORTED","left",  "artifact",18, ["A bug is reported,", "outside any loop"]),
     ("CLASS",   "spine", "gate",    18, ["What kind of open row?", "absent · partial · GAP"]),
@@ -243,8 +243,8 @@ Every backward arrow runs in the right-hand gutter; everything else runs on the 
 left.</p>
 {svg}
 <footer>kerbe · docs/lifecycle.md (mermaid source) · docs/render-lifecycle.py (this layout) ·
-solid blue = ported skill · dashed blue = planned · orange = gate that stops rather than
-guesses · grey = artifact · green = config seam</footer></body></html>"""
+blue = skill · orange = gate that stops rather than guesses · grey = artifact ·
+green = config seam</footer></body></html>"""
     tmp = pathlib.Path("/tmp/kerbe-lifecycle-poster.html")
     tmp.write_text(html)
     chrome = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"

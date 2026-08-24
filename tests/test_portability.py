@@ -17,7 +17,7 @@ EXECUTORS = REPO / "adapters" / "executor"
 # Mechanism names that belong in adapters/, never in a skill body.
 HARNESS_TOKENS = re.compile(r"Agent\(|isolation:|spawn_agent|TaskCreate|add-dir|additionalDirectories")
 
-STACK_FILES = ("verify.md", "commands.md", "impact.md")
+STACK_FILES = ("verify.md", "commands.md", "impact.md", "risk-tiers.md")
 REQUIRED_COMMANDS = (
     "full test suite",
     "single test file",
@@ -92,6 +92,16 @@ class StackAdapterParityTest(unittest.TestCase):
                 self.assertIn(kind, text,
                               "%s/impact.md must cover %r (recipe or n/a)"
                               % (stack.name, kind))
+
+    def test_risk_tiers_cover_all_three_tiers(self):
+        for stack in self.stacks():
+            text = (stack / "risk-tiers.md").read_text()
+            for tier in ("Tier 1", "Tier 2", "Tier 3"):
+                self.assertIn(tier, text,
+                              "%s/risk-tiers.md must define %s" % (stack.name, tier))
+            self.assertIn("full", (stack / "risk-tiers.md").read_text().lower(),
+                          "%s tier-3 exemption must be bound to a full-suite run"
+                          % stack.name)
 
     def test_unsupported_capabilities_are_declared_not_omitted(self):
         """A stack that cannot do something says n/a in the file that owns it."""

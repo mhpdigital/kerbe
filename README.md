@@ -68,6 +68,17 @@ destination that exists, admits the audience, and acts on the object?), and both
 state transition. Then fix and test in one pass, validate with the full suite, commit scoped
 by pathspec with a root-cause message.
 
+### `kerbe:review`
+
+Risk-tiered code review of a slice's diff, run **after** the coverage verdict: tier 1
+business logic read line by line with per-row open commands (`editor_cmd` from the
+config), tier 2 glue read for flow, tier 3 boilerplate trusted only behind a
+**full-suite** run — when a global-effect diff shows only a scoped run, the tier-3 skip
+does not apply. An adversarial pass tries to break the draft review before it is
+recorded as a sequential QR in the slice's `REVIEW.md` (plus a human `REVIEW_GUIDE.md` on
+the first review). Classification rules live per stack in `adapters/stack/*/risk-tiers.md`;
+findings route to `kerbe:bug`, never into the coverage ledger.
+
 ### Executors
 
 Skill bodies name worker **intent** only; the dispatch mechanism lives in
@@ -84,9 +95,9 @@ aspect ratio.
 
 ## Repository layout
 
-- `skills/` — the plugin skills (`coverage`, `start`, `figma`, `plan`, `implement`, `bug`)
+- `skills/` — the plugin skills (`coverage`, `start`, `figma`, `plan`, `implement`, `bug`, `review`)
 - `adapters/` — design adapters (`figma`, `none`), stack adapters (`symfony`, `flutter`:
-  `verify.md` / `commands.md` / `impact.md`), executor adapters (`claude`, `inline`)
+  `verify.md` / `commands.md` / `impact.md` / `risk-tiers.md`), executor adapters (`claude`, `inline`)
 - `fixtures/` — mini projects with planted, known gaps; the standing acceptance gate for
   every change to a skill (`fixtures/ACCEPTANCE.md`)
 - `docs/` — specs and implementation plans

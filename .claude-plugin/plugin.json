@@ -1,8 +1,8 @@
 {
   "name": "kerbe",
   "displayName": "Kerbe",
-  "description": "Portable slice-based SDLC skills with stack, design and executor adapters. Skills: start, figma, plan, implement, bug, coverage.",
-  "version": "0.3.0",
+  "description": "Portable slice-based SDLC skills with stack, design and executor adapters. Skills: start, figma, plan, implement, bug, coverage, review.",
+  "version": "0.4.0",
   "author": {
     "name": "MHP Digital"
   },

@@ -705,6 +705,31 @@ with the Phase-1 defects fixed **in Kerbe** rather than retrofitted into the fro
       as the denominator and `verdict.py` as the exit condition). It closes the loop
       coverage opens — validate it on the first real remediation run.
 
+### 1.8 Review leg ported (2026-08-25): `review`
+
+Ported by copy from the frozen `sdlc-code-review` after a clean real-world run of the
+source confirmed the behaviour to preserve.
+
+- [x] Tier *concept* + review discipline in the skill body; every classification rule in
+      `adapters/stack/{symfony,flutter}/risk-tiers.md` (symfony extracted — the four
+      project rules generalised, the cross-tenant bundle named as a conditional example;
+      flutter authored fresh, generated-sources caveat included).
+- [x] **§1.4 closed in review too:** tier 3's "trust the tests" narrowed to "trust a
+      full-suite run" in the skill and both adapters — a global-effect diff with only a
+      scoped run loses the tier-3 skip.
+- [x] `phpstorm --line` literals → `kerbe.editor_cmd` template (`{line}`/`{file}`),
+      degrading to plain `file:line` when unset. Diff base from `workspace.base_branch`
+      (merge-base), not a hardcoded trunk.
+- [x] Lifecycle position fixed: after the coverage verdict; findings route to
+      `kerbe:bug`, never into the ledger. Preserved verbatim: QR format with Flags last,
+      ATOMIC-ITEM per-row Open cells, the adversarial pass, slice-based-not-session-based,
+      the strikethrough convention, REVIEW_GUIDE.md on first review.
+- [x] Gates: `fixtures/check_review.py` + `tests/test_check_review.py`; parity extended —
+      every stack must ship `risk-tiers.md` with all three tiers and the full-suite-bound
+      exemption. 60 tests green.
+- [ ] Run the subagent fixture gate (git-init scratch, planted three-tier change set) and
+      validate the judgment half on the first real slice review.
+
 **→ `sdlc-*` is now FROZEN. Everything below happens in `~/projects/kerbe/`.**
 
 ---

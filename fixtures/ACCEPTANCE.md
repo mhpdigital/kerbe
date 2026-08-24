@@ -115,6 +115,25 @@ covers the two things that are checkable offline and the rest is stated as a gap
    root-cause message. Record the result below. This gap is stated, not hidden — the same
    standing as `kerbe:figma`'s live operations.
 
+## kerbe:review gate
+
+Any change to `skills/review/` or the `risk-tiers.md` adapters reruns before real use:
+
+1. `python3 -m unittest tests.test_check_review tests.test_portability` — QR structure
+   checker, and parity (both stacks ship `risk-tiers.md` defining all three tiers with the
+   tier-3 exemption bound to a full-suite run).
+2. **Fixture run.** Copy `symfony-mini` to a scratch dir, `git init` it, commit the tree
+   as the base, then apply a small planted change set (edit `CardController.php` — add a
+   condition to `detail()`; edit `_card.scss`; add a route link in `index.html.twig`).
+   Dispatch a fresh subagent: read `<repo>/skills/review/SKILL.md`, review the diff
+   against the base commit on the scratch slice `cards`. Score:
+   `python3 fixtures/check_review.py <scratch>/planning/slices/cards/REVIEW.md <comma-separated changed files>`
+   — exit 0 required. Read the report: the controller edit must be tier 1 with line
+   references, the SCSS tier 3, and the QR must note an adversarial pass ran.
+3. The judgment half — mis-tiering, spec-deviation findings, severity — cannot be
+   structurally checked; it is validated on the first real slice review and recorded
+   below. Stated, not hidden.
+
 ## Recorded runs
 
 | Date | Fixture | Model | Result |
@@ -127,3 +146,4 @@ covers the two things that are checkable offline and the rest is stated as a gap
 | 2026-08-20 | — (offline gates only) | — | kerbe:plan / kerbe:implement / kerbe:bug ported. Deterministic gates PASS: 52 unit tests green (`check_plan`, `check_progress`, portability invariants — harness-neutrality grep clean, both stack adapters declare every command capability and impact kind). **Pending, stated:** the three subagent fixture runs above (plan design-gate stop + authoring, implement tracker dry run) and the two first-real-run validations (implement per-task full-suite gate, bug impact table). |
 | 2026-08-20 | first real run: `kerbe:bug` × 6 blockers (subscription) | opus | **PASS on the method, one gap found.** Impact analysis held across all six: R1-04's table found a second unattached-card site (`setDefault`) the report never mentioned, R1-01's tests followed the link rather than asserting a route name, R1-03 distinguished a scheduled cancel from a lapsed one. Commit discipline held — four pathspec-scoped commits with root-cause bodies, three entangled defects on one path deliberately committed together. **Gap: every commit cited per-file evidence (17/17, 19/19, 21/21 in the file) and no full-suite run.** The diffs changed `SubscriptionLifecycle::reactivate()` and `SubscriptionPlanRepository`, both consumed well outside the diff, yet the Symfony global-effect list is artifact-shaped (entity/migration/config/fixtures) and did not name them. Adapter hardened with a behavioural row (callers outside the diff, grep before deciding). |
 | 2026-08-20 | first real run, part 2: the implement/bug full-suite gate (subscription) | opus | **Gap from the run above closed, and a second trap found.** Full suite green — `--testsuite 'Project Test Suite'` 1480 tests / 5438 assertions, no errors, no failures. The first attempt looked red (76 errors) because a bare `php vendor/bin/phpunit` runs *every* suite the config declares, including a Browser suite of 81 Panther tests that cannot run in that container (dead ChromeDriver) and hit a pre-existing `profession_id` FK. Zero errors outside `Tests\Browser`, and the four fix commits touch no entity and no migration, so no regression. Adapter hardened: `commands.md` now carries **Which suite is the gate** — name the suite explicitly, report a browser/e2e suite as a separate claim with its own prerequisites. A gate command that quietly includes an unrunnable suite reads as broken code; one that quietly excludes e2e hides real failures. |
+| 2026-08-25 | — (offline gates only) | — | kerbe:review ported from the frozen suite. Deterministic gates PASS: 60 tests green (`check_review` structure checks — QR sequence, five sections with Flags last, tier-1 line refs + ATOMIC-ITEM Open cells, coverage-vs-changed-files, strikethrough hygiene; parity — both stacks ship `risk-tiers.md`, all three tiers, tier-3 exemption bound to full-suite). §1.4 fix carried into the port: the tier-3 "trust the tests" skip does not apply when a global-effect diff shows only a scoped run. **Pending, stated:** the subagent fixture run (step 2) and first-real-review validation of the judgment half. |

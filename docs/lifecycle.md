@@ -46,7 +46,7 @@ flowchart TB
     COVAUD["kerbe:coverage — audit<br/>EXTRACT the ledger, then VERIFY every row"]:::skill
     LEDGER[("PROMISES.md — FROZEN<br/>one row per leaf promise · the denominator")]:::artifact
     VERDICT{"verdict.py — computed, never asserted"}:::gate
-    REVIEW["kerbe:review — risk-tier the diff<br/>tier 1 business logic read line by line · tier 3 trusted only<br/>behind a FULL-suite run · adversarial pass over the review<br/>recorded as QR-n in REVIEW.md"]:::planned
+    REVIEW["kerbe:review — risk-tier the diff<br/>tier 1 business logic read line by line · tier 3 trusted only<br/>behind a FULL-suite run · adversarial pass over the review<br/>recorded as QR-n in REVIEW.md"]:::skill
     DONE["Slice FINISHED · merge → INDEX: done"]:::done
 
     subgraph FIXLOOP["Loop 2 — remediation, repeats until the verdict clears"]
@@ -100,11 +100,10 @@ not move while the loop runs, which is what makes "we closed 6 of 36" a measurem
 a feeling. A row that turns out to be a design leaf the spec never accepted leaves the loop
 through a **spec decision**, not through a build task.
 
-`kerbe:review` is **not ported yet** — the frozen `sdlc-code-review` does this job today.
-It sits after the verdict for a reason: reviewing a branch that is still missing promised
-functionality spends a reviewer's attention on what is there instead of what is not. Its
-findings are code defects, not missing promises, so they route to `kerbe:bug` rather than
-becoming ledger rows.
+`kerbe:review` sits after the verdict for a reason: reviewing a branch that is still
+missing promised functionality spends a reviewer's attention on what is there instead of
+what is not. Its findings are code defects, not missing promises, so they route to
+`kerbe:bug` rather than becoming ledger rows.
 
 The two loops meet at one artifact: `PROMISES.md`. Loop 1 produces the code the ledger
 measures; Loop 2 consumes what the ledger says is missing.
