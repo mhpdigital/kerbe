@@ -123,7 +123,9 @@ def git(args, cwd):
 def manifest(design_dir, allow_dirty):
     sha = git(["log", "-1", "--format=%h", "--", "."], design_dir)
     committed = git(["log", "-1", "--format=%cs", "--", "."], design_dir)
-    dirty = bool(git(["status", "--porcelain", "--", "."], design_dir))
+    # EXTRACT.json is this script's own output; it living beside the artboards
+    # must not make the design "dirty" on the very run that writes it.
+    dirty = bool(git(["status", "--porcelain", "--", ".", ":!EXTRACT.json"], design_dir))
     if dirty and not allow_dirty:
         raise SystemExit("REFUSED: %s has uncommitted changes — commit or discard them, "
                          "or pass --allow-dirty (the pin becomes <sha>-dirty)" % design_dir)
