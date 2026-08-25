@@ -72,6 +72,7 @@ class DcExtractTest(unittest.TestCase):
         used = next(r for r in rows if r["id"] == "used-notice")
         self.assertIn("sc-if", used["branch"])
         self.assertTrue(used["interactive"], "data-leaf marks a non-control as a leaf")
+        self.assertEqual(used["type"], "state", "the data-leaf kind is the row's type")
 
     def test_a_hidden_input_is_plumbing_not_a_leaf(self):
         rows = dc_extract.extract(design_dir())

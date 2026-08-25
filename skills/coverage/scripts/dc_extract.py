@@ -41,7 +41,8 @@ class _Leaf:
             "file": self.file,
             "id": self.attrs.get("id"),
             "tag": self.tag,
-            "type": self.attrs.get("type") or self.attrs.get("role") or self.tag,
+            "type": (self.attrs.get("type") or self.attrs.get("role")
+                     or self.attrs.get("data-leaf") or self.tag),
             "text": text[:120],
             "branch": self.branch,
             "style": self.attrs.get("style", ""),
