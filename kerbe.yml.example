@@ -11,8 +11,9 @@ kerbe:
     spec_globs: ["*.md"]                  # spec docs in the slice folder; classified by content, not filename
     plan_glob: "*PLAN*.md"                # the frozen task list; progress ledgers are never the plan
   design:
-    adapter: figma                        # figma | none
-    cache_dir: design-cache               # snapshot dir, relative to the slice folder
+    adapter: figma                        # figma | claude-design | none
+    # dir: design                         # claude-design only: *.dc.html artboards, relative to the slice folder
+    cache_dir: design-cache               # figma only: snapshot dir, relative to the slice folder
     file_key: "<figma-file-key>"          # required for adapter: figma
     token_env: FIGMA_API_TOKEN            # env var holding the API token…
     # token_cmd: "aws ssm get-parameter --name /<project>/figma/api-token --with-decryption --query Parameter.Value --output text"

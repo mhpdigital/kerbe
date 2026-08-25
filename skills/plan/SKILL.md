@@ -61,8 +61,12 @@ Read `{planning_root}/{slice}/SETTINGS.md` and branch on `design_required`:
 - **`design_required: true`** ⇒ `UI_ELEMENTS.md` must exist with its **Design sources**
   block populated: file key, page, and one row per screen carrying a **node id** and a
   `measured=` date. Then check freshness the way the design adapter defines it (for
-  `figma`: compare the file's `lastModified` against the oldest `measured=`).
-  - block unfilled or node ids missing ⇒ **STOP**, run `/kerbe:figma extract` and fill it
+  `figma`: compare the file's `lastModified` against the oldest `measured=`; for
+  `claude-design`: compare each artboard's last commit date, `git log -1 --format=%cs --
+  <design dir>/<file>`, against its row's `measured=`, and run `dc_extract.py --lint` —
+  a failing lint counts as an unfilled block).
+  - block unfilled or node ids missing ⇒ **STOP**, run the adapter's extraction
+    (`/kerbe:figma extract`, or `dc_extract.py` for `claude-design`) and fill it
   - any `measured=` older than the design's last modification ⇒ **STOP**, the design moved
     since it was measured; re-measure and re-date before planning
   - fresh ⇒ proceed
@@ -177,6 +181,7 @@ Then, four changes to the authoring rules:
 - Spec docs incomplete or questions open ⇒ `/kerbe:start` and specify first
 - `SETTINGS.md` missing or `design_required` unanswered ⇒ `/kerbe:start`
 - `design_required: true` and the Design-sources block is empty or stale ⇒ `/kerbe:figma`
+  (or `dc_extract.py` under the `claude-design` adapter)
 - The plan exists and you are building it ⇒ `/kerbe:implement`
 - Checking what is built against what was promised ⇒ `/kerbe:coverage`
 

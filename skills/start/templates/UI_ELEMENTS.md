@@ -2,12 +2,14 @@
 
 ## Design sources
 
-> REQUIRED when `SETTINGS.md` has `design_required: true`. `/kerbe:figma` fills this in and
-> keeps `measured=` current; `/kerbe:plan` reads it and STOPS if it is unfilled or stale.
+> REQUIRED when `SETTINGS.md` has `design_required: true`. The design adapter's extraction
+> fills this in (`/kerbe:figma`, or `dc_extract.py` for `claude-design`) and keeps
+> `measured=` current; `/kerbe:plan` reads it and STOPS if it is unfilled or stale.
 > One row per screen — pin the **node id**, never just the frame name, because a file
-> usually carries several stale iterations of the same frame.
+> usually carries several stale iterations of the same frame. Under `claude-design` the
+> "file" is the artboard (`Main.dc.html`) and the node id is the element's `id`.
 
-- **Design file:** `{fileKey}` · **Page:** `{page name}`
+- **Design file:** `{fileKey or design dir}` · **Page:** `{page name or design@<sha>}`
 
 | Screen / frame | Node id | Measured (YYYY-MM-DD) |
 |----------------|---------|-----------------------|

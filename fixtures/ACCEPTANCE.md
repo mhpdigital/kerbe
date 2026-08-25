@@ -65,6 +65,18 @@ Any change to `skills/figma/` reruns before real use:
    are validated on the next real slice run and the result recorded below. That gap is
    stated, not hidden.
 
+## claude-design adapter gate
+
+Any change to `adapters/design/claude-design.md` or `skills/coverage/scripts/dc_extract.py`
+reruns before real use:
+
+1. `python3 -m unittest tests.test_dc_extract` — leaf enumeration with `id` as node id,
+   `sc-if`/`sc-for` branch recording, helmet/script exclusion, lint (id-less interactive
+   leaf, duplicate id across artboards), dirty-tree refusal, git pin in the manifest.
+2. The artifact round-trip (`seed-canvas.mjs --extract` back into the design dir, ids
+   surviving a GUI save) cannot run against fixtures — validated on the next real slice
+   and recorded below. That gap is stated, not hidden.
+
 ## kerbe:plan gate
 
 Any change to `skills/plan/` (SKILL.md or `references/plan-spec.md`) reruns this before

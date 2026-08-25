@@ -42,7 +42,8 @@ status. Nothing is created.
      setting exists to stop. You may attach a recommendation, clearly labelled as such.
    - Frame the options by what they oblige: `true` = design-driven, `UI_ELEMENTS.md` is
      created with an unfilled Design-sources block and `/kerbe:plan` will refuse until
-     `/kerbe:figma` fills it; `false` = no design leg, `UI_ELEMENTS.md` omitted, and the
+     the adapter's extraction fills it (`/kerbe:figma`, or `dc_extract.py` over the
+     committed artboards for `claude-design`); `false` = no design leg, `UI_ELEMENTS.md` omitted, and the
      Notes row must say **which kind** of false — "no UI at all" vs "has UI, no design
      yet" (the second is a design question to raise, and flips to `true` when the frame
      lands).
@@ -70,7 +71,8 @@ status. Nothing is created.
    — it does not exist yet and this skill never creates it, but the build session will need
    access to both roots and this is where that becomes visible.
 9. Report what was created, state the recorded `design_required` value back to the user
-   (it decides whether `/kerbe:figma` is mandatory next or skipped), and give the fill
+   (it decides whether the design leg — `/kerbe:figma`, or authoring artboards under
+   `design/` for `claude-design` — is mandatory next or skipped), and give the fill
    order: UI_ELEMENTS (leaf-level — one row per interactive leaf with node id; this is
    the granularity the coverage ledger will verify) → ENTITIES → ROUTES → SECURITY →
    DONE_CRITERIA → REQUIREMENTS (a `REQ-<DOMAIN>-<NNN>` for every testable requirement,

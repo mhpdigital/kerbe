@@ -27,7 +27,7 @@ Anything outside this vocabulary is a format error (`verdict.py` exits 2):
 |---|---|
 | `id` | `P-001` … unique, never reused. A demoted row is deleted and its id retires. |
 | `promise` | one line, leaf-level, user-recognizable |
-| `promised-by` | `figma:<node-id>` · `req:<REQ-ID>` · `doc:<file>#<heading>` · `plan:<task heading>` |
+| `promised-by` | `figma:<node-id>` · `design:<file>#<id>` (claude-design artboard leaf) · `req:<REQ-ID>` · `doc:<file>#<heading>` · `plan:<task heading>` |
 | `spec` | `?` (unverified) · `req:<id>` / `doc:…` (where the spec captures it) · `origin` (promise originates here) · `GAP` (designed, unspec'd) · `n/a` (no design leg by config) |
 | `plan` | `?` (unverified) · `task:<heading>` · `origin` · `GAP` (spec'd, untasked) · `none-yet` (no plan file exists — valid pre-impl state) |
 | `code` | `?` (unverified) · `present` · `partial` (shell: stub, unwired route, dead link, unimported stylesheet, class mismatch, designed divergence) · `absent` · `to-build` (pre-impl label for expected absence) |

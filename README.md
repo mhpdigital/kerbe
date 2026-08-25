@@ -96,7 +96,8 @@ aspect ratio.
 ## Repository layout
 
 - `skills/` — the plugin skills (`coverage`, `start`, `figma`, `plan`, `implement`, `bug`, `review`)
-- `adapters/` — design adapters (`figma`, `none`), stack adapters (`symfony`, `flutter`:
+- `adapters/` — design adapters (`figma`, `claude-design` — git-committed `*.dc.html`
+  artboards, node id = element `id`, no API — and `none`), stack adapters (`symfony`, `flutter`:
   `verify.md` / `commands.md` / `impact.md` / `risk-tiers.md`), executor adapters (`claude`, `inline`)
 - `fixtures/` — mini projects with planted, known gaps; the standing acceptance gate for
   every change to a skill (`fixtures/ACCEPTANCE.md`)
