@@ -51,6 +51,10 @@ class _Leaf:
 
 
 def is_interactive(tag, attrs):
+    # A hidden input is plumbing (a form's intent field), not something a user
+    # can recognise or act on, so it is never a promise and needs no id.
+    if tag == "input" and attrs.get("type", "").lower() == "hidden":
+        return False
     if tag in INTERACTIVE_TAGS:
         return True
     if "role" in attrs or "data-leaf" in attrs:

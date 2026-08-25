@@ -22,6 +22,7 @@ ARTBOARD = """<!doctype html>
   <h1>aus4 / php8.1 — 47 sites down</h1>
   <pre id="command-preview">systemctl reload php8.1-fpm</pre>
   <form id="ack-form" method="post">
+    <input type="hidden" name="intent" value="ack">
     <button id="ack-button" type="submit" style="height: 44px">Acknowledge</button>
   </form>
   <form id="act-form" method="post">
@@ -71,6 +72,11 @@ class DcExtractTest(unittest.TestCase):
         used = next(r for r in rows if r["id"] == "used-notice")
         self.assertIn("sc-if", used["branch"])
         self.assertTrue(used["interactive"], "data-leaf marks a non-control as a leaf")
+
+    def test_a_hidden_input_is_plumbing_not_a_leaf(self):
+        rows = dc_extract.extract(design_dir())
+        hidden = [r for r in rows if r["tag"] == "input" and r["type"] == "hidden"]
+        self.assertEqual(hidden, [], "hidden inputs must not be enumerated or linted")
 
     def test_helmet_and_script_content_is_not_a_leaf(self):
         rows = dc_extract.extract(design_dir())
