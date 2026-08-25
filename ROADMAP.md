@@ -1321,6 +1321,20 @@ schema-constrained output.
 
 ---
 
+## Non-goals — noted, not scheduled
+
+**Per-change coding discipline (single fixes) is outside the suite, deliberately.** Kerbe's
+skills are lifecycle ceremonies — slice-scale, human-triggered (`disable-model-invocation` on
+every one), artifact-producing. None of them governs how an individual mid-review fix or
+one-off change gets written; that ambient layer (test-first, red-before-green on a single
+change) is currently filled by superpowers' auto-triggered process skills when installed, and
+by harness default behaviour when not. Observed composing cleanly in practice (2026-08-26, a
+`kerbe:review`-ported flag fixed under `superpowers:test-driven-development` — the RED phase
+caught an existing test asserting the buggy outcome). If this ever needs owning, the fix is
+not making kerbe skills model-invocable; it is stating the assumed per-change discipline
+inside `kerbe:implement` and the review-fix loop so the ceremony travels with the skill.
+Not required now — recorded so the boundary stays a decision, not an accident.
+
 ## Sequencing summary
 
 | Phase | Depends on | Deliverable |
