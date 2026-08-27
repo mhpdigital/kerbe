@@ -730,6 +730,71 @@ source confirmed the behaviour to preserve.
 - [ ] Run the subagent fixture gate (git-init scratch, planted three-tier change set) and
       validate the judgment half on the first real slice review.
 
+### 1.9 Review deciders + countable QRs (2026-08-27, from the reference project's `subscription` mid-slice retro)
+
+Origin: `subscription` was consolidated on 2026-06-21 from five would-be slices because,
+agent-accelerated, "the pieces are 3–7h each". Build effort did stay small per piece; what
+compounded was **verification and review attention** — one page, one model, one payment
+surface. At QR-1 it carried 35 business-logic rows and 20 flags (1 blocker, 2 high) against
+22 rows / 9 flags for the same-era, same-skill `user-admin` review. Every trigger in
+`sdlc-split` (LOC, commits, churn ×, fix-rate) is a *lagging* volume measure, and the
+commit-based ones are not even countable — agents alternate between auto-commit-per-prompt
+and no-commit depending on the session. Sizing needs **leading** inputs available at
+`scoped`, and review needs a **risk multiplier** that is orthogonal to size.
+
+**Review deciders.** The common property: the failure mode is invisible to the unit/functional
+suite. Size predicts *how much* to read; a decider predicts *whether reading is enough*.
+
+| # | Class | Why the suite can't see it |
+|---|---|---|
+| 1 | Money movement | provider schema/behaviour is external and irreversible (Stripe basil invoice had no `charge` — no stub could show it) |
+| 2 | Transactional email | transport is `null://` in every test env; sent = unsendable; not-sent = dead funnel |
+| 3 | Marketing / bulk email | one bug = N incidents; deliverability damage persists; unsubscribe compliance |
+| 4 | Identity / SSO | provider config lives outside the repo; lockout is total |
+| 5 | Business-system integration (Workspace / O365 / CRM as a *destination*) | the other side is someone else's system of record |
+| 6 | Infrastructure touching | blast radius is every slice; IaC ≠ reality; review env ≠ production |
+| 7 | PII / medical data leaving the system | exposure is a legal event, not an assertion failure |
+| 8 | Public-web / SEO surface | indexed before you notice; redirect maps are one-shot |
+| 9 | **Removal** | tests don't cover what no longer exists; an IaC task removed silently reverts state on the next run (MGR2 / Ansible is the archetype) |
+
+**Modifiers** (properties that make any class worse, not classes themselves): *unattended*
+(cron / queue / webhook — no human in the loop), *metered* (per-call cost), *one-shot* (the
+cutover run itself — the rerunnable, idempotent import script is ordinary code and is NOT a
+decider; the single run against live data with the old system still writing is class 1 or 6).
+
+Deliberately excluded after discussion: "legacy migration" (idempotent imports are cheap and
+repeatable), "async/scheduled" and "metered cost" as classes (they are modifiers).
+
+- [ ] **Config seam:** `kerbe.yml` → `review_deciders:` names the per-project instances
+      (e.g. `payment: stripe`, `txn_email: symfony-mailer`, `identity: [google, microsoft]`,
+      `infra_paths: [ansible/, infra/]`). Classes are Kerbe vocabulary; instances are the
+      project's. `kerbe:start` asks which classes a new slice touches and records them in
+      SCOPE.md's header.
+- [ ] **Sizing input at `scoped`:** ROUTES.md row count (+ REQUIREMENTS.md rows as a
+      second reading) — on the reference project (n=6 slices with current templates) both rank slices in
+      the same order as post-review business-logic rows, and `subscription` was the outlier
+      on both before any code (42 routes vs next 19). Screens/states from UI_ELEMENTS.md is
+      secondary: blind to admin-only slices. Proposed rule to calibrate against BL rows over
+      time: **routes > ~30 OR deciders ≥ 2 → split by verifiability boundary** (stub-testable
+      core vs real-provider integration), not by effort.
+- [ ] **Tier rule in `risk-tiers.md` (every stack):** a file that instantiates a decider is
+      always-tier-1 regardless of what it looks like; each decider present adds a named
+      mandatory check to the QR (class 2 → "prove the email is sent, to whom, with a real
+      transport"; class 9 → "list every consumer of the removed thing").
+- [ ] **Removal tier rule:** deletions (`--diff-filter=D`, net-negative hunks in shared code
+      or IaC) are read every line — the inverse of tier 3, which trusts tests that cannot
+      cover absent code.
+- [ ] **Countable QRs:** `kerbe:review` emits a machine-readable count block in the QR
+      metadata — rows per tier, flags per severity, deciders present, adversarial pass
+      ran, **skill + commit that produced it** (`kerbe:review @ 037cb51`). Retrospectives
+      bucket by skill generation instead of regexing markdown; the reference-project retro needed
+      three regex passes to get the same numbers twice, and "rounds" flipped from
+      append-a-QR to strike-in-place between generations and is not comparable at all.
+- [ ] **Retire commit-count triggers** (split T3 commits >20, T5 fix-like %) until commit
+      discipline is enforced by the harness; keep LOC/churn as weak lagging signals only.
+      Business-logic rows at review are the era-stable *target* the leading inputs are
+      calibrated against — never a sizing input themselves (there is no review before code).
+
 **→ `sdlc-*` is now FROZEN. Everything below happens in `~/projects/kerbe/`.**
 
 ---
