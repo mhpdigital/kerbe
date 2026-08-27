@@ -6,6 +6,10 @@ kerbe:
   # editor_cmd: "phpstorm --line {line} {file}"
                                           # optional: per-finding open command for reviews ({file} is absolute);
                                           #   unset ⇒ reviews print clickable file:line references instead
+  # editor_cmd_method: "phpstorm --line $(grep -n 'function {method}(' {file} | cut -d: -f1) {file}"
+                                          # optional: method-anchored variant for review rows that name a method();
+                                          #   resolves the line at run time so it survives line drift. Stack-specific
+                                          #   (the grep above is PHP) — unset ⇒ every row uses editor_cmd
   # legacy_root: ../legacy-app            # optional: old system a slice may migrate from (enables IMPORT/CODEMAP docs)
   promise_sources:
     spec_globs: ["*.md"]                  # spec docs in the slice folder; classified by content, not filename

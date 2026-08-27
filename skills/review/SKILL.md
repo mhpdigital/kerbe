@@ -79,6 +79,16 @@ read, open, review, tick, next. The Open cell is `editor_cmd` with `{line}`
 and the **absolute** `{file}` substituted; with no `editor_cmd` configured, a plain
 `file:line` reference (clickable in most terminals) — and say the config key exists.
 
+**Anchor on the method when you can.** Line numbers drift as fixes land during the
+review, and a static `--line {n}` soon opens the wrong place. When the row names a
+`method()` and `editor_cmd_method` is configured, render the Open cell from THAT
+template instead, substituting `{method}` and `{file}` — it resolves the line at run
+time (e.g. via `grep -n`). Fall back to `editor_cmd` only for rows with no method to
+anchor on (file-level rows, a region inside a long method). The `(L{n}–{m})` range in
+the first column stays as a reader's snapshot. A template containing `|` MUST have it
+written as `\|` inside the table cell, or the pipe splits the row and truncates the
+command.
+
 ```
 ### Business-logic — read every line
 | File · concern (lines) | Why | Open |
