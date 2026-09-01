@@ -16,6 +16,8 @@ names a container, a project, or a path outside the app root — that belongs in
 | migrate (dev) | `php bin/console doctrine:migrations:migrate --no-interaction` |
 | migrate (test) | `php bin/console doctrine:migrations:migrate --no-interaction --env=test` |
 | generate migration | `php bin/console make:migration` |
+| migrate one version up/down (round-trip evidence for a migration's `down()`) | `php bin/console doctrine:migrations:execute '<FQN\Version>' --up|--down --no-interaction` |
+| ad-hoc SQL for evidence (idempotence counts, seed-row checks) | `php bin/console dbal:run-sql "<sql>"` — evidence queries only, never schema changes |
 | clear cache | `php bin/console cache:clear` |
 | asset entries | `php bin/console importmap:install` *(when the project uses AssetMapper)* |
 | run app | project-owned (`kerbe.workspace.setup_cmds`) — the adapter does not start containers |
