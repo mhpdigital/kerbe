@@ -12,7 +12,7 @@ completion report". This file owns the mechanism, so the lifecycle stays harness
 | filesystem-isolated worker | yes | `isolation: "worktree"` — a private git worktree per worker |
 | concurrent workers | yes | dispatch all independent workers in **one** message so they run at once |
 | background workers | yes | `run_in_background: true`; the orchestrator is re-invoked on completion |
-| effort levels | `low` / `standard` / `deep` | map to `model: haiku` / `sonnet` / the session model |
+| effort levels | `low` / `standard` / `deep` | map to `model: haiku` / `sonnet` / `opus`. Never omit `model`: a worker with no model inherits the session's, which under Night Shift's routing may be the dearest tier — `deep` is Opus, not "whatever the orchestrator runs on" |
 | structured completion output | no | workers return prose. The orchestrator re-derives every claim from the diff — see limits |
 
 ## Invoke

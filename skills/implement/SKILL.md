@@ -156,7 +156,11 @@ and never neither — a run that just trails off strands the automation watching
 
 ## Step 4 — dispatch
 
-Per the executor adapter, one worker per task, with a **self-contained** brief:
+Per the executor adapter, one worker per task, with a **self-contained** brief. **Effort
+level per task, stated explicitly on every dispatch** (the adapter maps it to a model —
+never leave the model to inherit): `standard` is the default for implementation work;
+`deep` only for a task the plan marks as tier-1 business logic, a data-model change, or a
+shared guard; `low` for mechanical tasks (fixtures, generated boilerplate, doc stubs).
 
 - the workspace path and the branch it must stay on
 - the task's own text, quoted from the frozen plan (including its `node=` design origin and

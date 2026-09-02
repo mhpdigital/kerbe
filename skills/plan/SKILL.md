@@ -36,6 +36,11 @@ denominator.
 
    State the mode, and the evidence for it, in one line before you start.
 
+**Fact-gathering delegations** (an Explore or general-purpose agent sent to read code,
+adapters or precedents for the plan) run at effort `standard` — pass `model: sonnet`
+explicitly. Reading is not where the plan's judgement lives; an unset model inherits the
+session's, which under Night Shift routing is the costliest tier for a read-only pass.
+
 ## Step 1 — the spec must be settled
 
 The slice's spec docs exist and their open questions are resolved. If the doc set is
