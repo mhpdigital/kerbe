@@ -124,10 +124,11 @@ consistency), then the structural check:
 python3 {plugin}/fixtures/check_plan.py {planning_root}/{slice}/PLAN.md
 ```
 
-Fix what it reports; it checks structure, not judgment. Commit the plan **scoped by
-pathspec** — `git commit -m "..." -- {planning_root}/{slice}/PLAN.md` — because the git
-index is shared across concurrent sessions and a bare commit sweeps up another session's
-staged work.
+Fix what it reports; it checks structure, not judgment. Commit the plan **in the planning
+repo, scoped by pathspec** — `git -C {planning_repo} commit -m "..." -- <slices>/{slice}/PLAN.md`
+(`{planning_repo}` = `git -C {planning_root} rev-parse --show-toplevel`, paths relative to
+it; see `config.md` → `planning_root`) — because the git index is shared across concurrent
+sessions and a bare commit sweeps up another session's staged work.
 
 Stamp `TIMING.md`'s plan row with `TZ='{kerbe.timezone}' date '+%Y-%m-%d %H:%M'` —
 timestamp only, no effort estimate.

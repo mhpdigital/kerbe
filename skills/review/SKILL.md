@@ -140,8 +140,10 @@ summary; the file must stand alone) to `{planning_root}/{slice}/REVIEW.md`:
   `## Design decisions` and `## Constraints` when there is content) → QRs in sequence,
   newest last, separated by `---` → `## Future functionality` as the end appendix.
 - Sequential ids QR-1, QR-2, … — never reused.
-- Commit scoped by pathspec: `git commit -m "..." -- {planning_root}/{slice}/REVIEW.md`
-  (plus the guide below when created) — the index is shared across concurrent sessions.
+- Commit in the planning repo, scoped by pathspec:
+  `git -C {planning_repo} commit -m "..." -- <slices>/{slice}/REVIEW.md` (plus the guide
+  below when created; `{planning_repo}` per `config.md` → `planning_root`) — the index is
+  shared across concurrent sessions.
 
 **Re-reviews and resolutions — the strikethrough convention** (applies to every review
 and planning markdown): strike the **entire** original item with `~~…~~`, follow it
