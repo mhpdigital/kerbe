@@ -18,6 +18,29 @@ Every command below runs inside `kerbe.stack.exec` when that template is configu
 | migrate | **n/a** — see above |
 | run app | project-owned (`kerbe.workspace.setup_cmds`) |
 
+## Which level a case runs at
+
+`PLAN.md` declares a level per case; this is what each one means here. The rule the planner
+applied is **reach for the framework only when the framework is part of the claim** — if the
+case would pass with the subject constructed directly and its collaborators stubbed, it is
+`unit`.
+
+| Level | Shape | Costs | Use when the claim is |
+|---|---|---|---|
+| `unit` | plain `test()` over a directly constructed subject | none | pure logic: a mapper, a validator, a state reducer, a use case with fake repositories |
+| `kernel` | `test()` with the provider/DI graph or a real local store (Drift/Isar) | container or DB setup | the wiring, an override, a migration, a query |
+| `http` | `testWidgets()` with the router and providers mounted | a pumped widget tree | the screen, the route, the guard, what the user actually sees |
+| `browser` | `flutter test integration_test` (its own suite) | a device or emulator | end-to-end behaviour on a real device |
+
+`http` is named for the seam it crosses, not for a protocol: in Flutter it is the widget +
+router boundary — the level at which a route guard or a rendered screen becomes observable.
+The acceptance floor in the plan spec applies unchanged: audience reachability, action chains
+and observable state transitions need a case at this level, whatever it costs.
+
+**`kernel`, `http` and `browser` cases need a lane**; `unit` cases need none, which is why
+`kerbe:implement` can schedule a unit-only task without one. That is a consequence of the
+level, never a reason to choose it.
+
 ## Global-effect artifacts (the full-suite trigger)
 
 Flutter has no schema migration, but it has the same **class** of change: one whose effect is

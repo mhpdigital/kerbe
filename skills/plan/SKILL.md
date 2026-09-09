@@ -84,9 +84,21 @@ someone will build from whatever the template already says.
 ## Step 3 — author the plan
 
 Follow `references/plan-spec.md` — the required header, the file-structure map, task
-right-sizing, the per-task effort level and the code boundary it sets, the seam rule, case
-tables, bite-sized TDD steps, and the no-placeholder rules. It is self-contained: this skill
-has **no external skill dependency**.
+right-sizing, the per-task effort level and the code boundary it sets, the per-task
+`**Depends:**` line, the seam rule, case tables with their `Level` column, bite-sized TDD
+steps, and the no-placeholder rules. It is self-contained: this skill has **no external
+skill dependency**.
+
+**Two fields decide how the slice actually gets built, so write them deliberately:**
+
+- **`**Depends:**`** is the scheduler's input. `/kerbe:implement` runs everything the graph
+  leaves free at the same time, so a dependency you declare out of caution is concurrency you
+  have spent. Declare consumed seams and shared files; justify anything else in a line.
+- **the case `Level`** decides what infrastructure has to exist before that case can be
+  proven. Choose it per case against the rule in the spec — boot the framework only when the
+  framework is part of the claim — and keep the acceptance floor: audience reachability,
+  action chains and HTTP-observable state transitions each need a real request, and a
+  client-side claim needs a browser.
 
 **Decide each task's effort level as you write it**, and let it set how much code the task
 carries: `low` is a typist and gets the code in full; `standard` and `deep` get seams, cases
@@ -218,6 +230,12 @@ Then, four changes to the authoring rules:
   editing a task a worker may already have read.
 - Every task carries an effort level, and the level sets the code boundary: full code at
   `low`, seams and cases at `standard` and `deep`.
+- Every task carries `**Depends:**`, and every case carries a `Level`. There is no per-plan
+  chain/group label — a single word for a whole plan cannot say that two tasks are
+  independent while three others are a genuine chain.
+- A case is `unit` unless the framework is part of its claim. The acceptance floor is the
+  limit on that: audience reachability, action chains and HTTP-observable state transitions
+  keep their `http` cases, and a client-side claim keeps its `browser` case.
 - Interfaces carry **seams only** — what another task, a specified test, or a later slice
   consumes. An internal helper or an exception class caught inside the same task is the
   worker's to name, and listing it is a defect, not thoroughness.

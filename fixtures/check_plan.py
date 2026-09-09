@@ -31,7 +31,54 @@ BAD_ADD = (r"git add -A\b", r"git add \.(?:\s|$)", r"git add \*")
 # worker adds an assertion the plan welcomed.
 ASSERTION_COUNT = r"\(\s*\d+\s+tests?\s*,\s*\d+\s+assertions?\s*\)"
 EFFORT = r"^\*\*Effort:\*\*\s*(low|standard|deep)\s*$"
+# Concurrency is read off a per-task dependency graph, not a per-plan chain/group label.
+DEPENDS = r"^\*\*Depends:\*\*\s*(none|\d+(?:\s*,\s*\d+)*)\s*$"
+# A case's level decides what infrastructure proves it, so it is a planning decision.
+LEVELS = ("unit", "kernel", "http", "browser")
 STATUS_OK = 0
+
+
+def case_levels(body):
+    """Levels declared in the task's case tables, as (found_a_table, bad_values)."""
+    found, bad, in_table = False, [], False
+    for line in body.splitlines():
+        stripped = line.strip()
+        if not stripped.startswith("|"):
+            in_table = False
+            continue
+        cells = [c.strip() for c in stripped.strip("|").split("|")]
+        if not cells:
+            continue
+        if cells[0].lower() == "level":
+            found, in_table = True, True
+            continue
+        if in_table and set(cells[0]) <= set("-: "):
+            continue
+        if in_table and cells[0].lower() not in LEVELS:
+            bad.append(cells[0])
+    return found, bad
+
+
+def find_cycle(deps):
+    """A task number on a dependency cycle, or None. Unknown targets are ignored."""
+    state = {}
+
+    def visit(node):
+        if state.get(node) == "done":
+            return None
+        if state.get(node) == "open":
+            return node
+        state[node] = "open"
+        for target in deps.get(node, ()):
+            if target in deps and visit(target) is not None:
+                return node
+        state[node] = "done"
+        return None
+
+    for node in deps:
+        if visit(node) is not None:
+            return node
+    return None
 
 
 def main(argv):
@@ -74,9 +121,13 @@ def main(argv):
           bool(re.search(r"^#{2,3} .*file[- ]structure|^#{2,3} .*files? map", text,
                          re.M | re.I)))
 
-    tasks = re.split(r"^### Task \d+[:.]", text, flags=re.M)[1:]
+    found = list(re.finditer(r"^### Task (\d+)[:.](.*?)(?=^### Task \d+[:.]|\Z)",
+                             text, re.M | re.S))
+    tasks = [m.group(2) for m in found]
+    numbers = [int(m.group(1)) for m in found]
     check("has at least one task", len(tasks) >= 1, "no '### Task N:' heading")
 
+    deps = {}
     for i, body in enumerate(tasks, start=1):
         tag = "task %d" % i
         check(tag + " lists Files", "**Files:**" in body)
@@ -85,6 +136,18 @@ def main(argv):
               "**Effort:** low | standard | deep — it sets the code boundary")
         check(tag + " has an Interfaces block", "**Interfaces:**" in body,
               "seams only; say none rather than omitting it")
+        declared = re.search(DEPENDS, body, re.M)
+        check(tag + " declares Depends", bool(declared),
+              "**Depends:** none | 2, 3 — the scheduler reads the graph, not a label")
+        if declared:
+            raw = declared.group(1).strip()
+            deps[numbers[i - 1]] = ([] if raw == "none"
+                                    else [int(n) for n in raw.split(",")])
+        has_table, bad = case_levels(body)
+        check(tag + " case table carries a Level column", has_table,
+              "| Level | Precondition | Expectation | @req |")
+        check(tag + " case levels are unit/kernel/http/browser", not bad,
+              str(bad[:3]))
         steps = re.findall(r"^- \[ \] ", body, re.M)
         check(tag + " has checkbox steps", len(steps) >= 3, "%d found" % len(steps))
         check(tag + " starts with a failing test",
@@ -95,6 +158,14 @@ def main(argv):
               all(re.search(r"git commit[^\n]*--\s+\S", line)
                   for line in re.findall(r"^.*git commit.*$", body, re.M)),
               "every git commit must end with -- <paths>")
+
+    unknown = sorted({t for targets in deps.values() for t in targets
+                      if t not in numbers})
+    check("every Depends names a task that exists", not unknown,
+          "no such task: " + str(unknown))
+    cycle = find_cycle(deps)
+    check("dependency graph is acyclic", cycle is None,
+          "task %s is on a cycle — the tasks are not independently deliverable" % cycle)
 
     for pat in BAD_ADD:
         check("no unscoped staging (%s)" % pat.replace("\\b", "").replace("\\", ""),

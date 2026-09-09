@@ -28,7 +28,9 @@ kerbe:
     adapter: symfony                      # symfony | flutter
     code_roots: ["symfony/"]           # where the slice's implementation lives; may contain {slice}
     # exec: "docker exec <container> bash -c 'cd /var/www/html/symfony && {cmd}'"
-                                          # optional wrapper for every adapter command ({cmd} is substituted)
+                                          # optional wrapper for every adapter command ({cmd} is substituted).
+                                          # With workspace.lanes > 1 it MUST carry {lane}, e.g.
+                                          #   "docker exec <project>-{slice}-l{lane}-web-test-1 {cmd}"
   workspace:                              # where implementation happens (kerbe:implement, kerbe:bug)
     root: ~/projects                      # parent dir for slice worktrees; omit ⇒ no worktree is created and
                                           #   the resolved stack.code_roots entry IS the workspace
@@ -41,6 +43,17 @@ kerbe:
     progress_file: claude-progress.md     # live per-workspace tracker; never a hidden dotfolder
     setup_cmds: []                        # commands run once after creating a workspace (env/DB standup), e.g.
       # - "docker compose up -d"
+    lanes: 1                              # isolated verification lanes per slice (worktree + its own env).
+                                          #   1 ⇒ every lane-bound task runs in the workspace, one at a time.
+                                          #   >1 REQUIRES {lane} in stack.exec, or every lane routes to the
+                                          #   same environment and workers verify nothing.
+    # worktree_setup_cmds:                 # run in EVERY fresh worktree, lane-bound or not. A fresh worktree
+      # - "composer install --no-interaction"   #   has source and no vendor/, so without this even a unit-only
+                                          #   worker cannot run its tests — unset ⇒ everything runs in lane 0.
+    # lane_setup_cmds:                     # run once per lane >0 to stand up its own environment.
+      # - "docker compose -p <project>-{slice}-l{lane} up -d"   # kerbe does no port/name arithmetic; this owns it
+    # lane_teardown_cmds:                  # run at end of the slice run; lane 0 is never torn down
+      # - "docker compose -p <project>-{slice}-l{lane} down -v"
   executor:
     adapter: claude                       # adapters/executor/<name>.md — how a task worker is dispatched
     routing: {}                           # optional task-class overrides, e.g. {business-logic: claude@standard}

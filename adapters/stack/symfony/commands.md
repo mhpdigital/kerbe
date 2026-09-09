@@ -60,6 +60,34 @@ Getting this wrong reads as a regression in both directions: run everything and 
 ChromeDriver looks like broken code; run the default and an e2e failure never surfaces at
 all. Name the suite, and say which one the evidence covers.
 
+## Which level a case runs at
+
+`PLAN.md` declares a level per case; this is what each one means here. The rule the planner
+applied is **boot the kernel only when the kernel is part of the claim** — if the case would
+pass with the subject constructed directly and its collaborators stubbed, it is `unit`.
+
+| Level | Base class | Costs | Use when the claim is |
+|---|---|---|---|
+| `unit` | `extends TestCase` | no kernel, no database | pure logic: a guard, a transition allow-list, a normaliser, a calculation |
+| `kernel` | `extends KernelTestCase` | kernel boot + database | the wiring, the mapping, the SQL, a computed read that only the database produces |
+| `http` | `extends WebTestCase` | kernel boot + request | the response, the security configuration, the route, the rendered template |
+| `browser` | Panther (its own suite) | a real browser | client-side behaviour — a control mounting, a dropdown opening |
+
+Two mistakes this table exists to prevent:
+
+- **Booting the kernel to reach a service.** `self::bootKernel()` followed by
+  `getContainer()->get(SomeService::class)` in order to assert pure logic is a `unit` case
+  wearing a `kernel` harness. Construct the service and stub its collaborators instead. On a
+  real slice this pattern cost ~60× per test, on tests whose subject needed none of it.
+- **Reaching for `WebTestCase` because it can assert anything.** It can assert status codes,
+  HTML *and* database rows, which makes it the path of least resistance for a planner who has
+  not decided what the seam is. Decide the seam.
+
+**`kernel` and `http` cases need a lane** (a container and a test database); `unit` cases need
+neither, which is why `kerbe:implement` can schedule a unit-only task without one. That is a
+scheduling consequence of the level, never a reason to choose it — see the acceptance floor
+in the plan spec for the cases that must stay at `http` whatever it costs.
+
 ## Repair, never bypass
 
 When the migration runner refuses because of an unrelated pre-existing failure, **repair the

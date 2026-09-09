@@ -9,8 +9,8 @@ completion report". This file owns the mechanism, so the lifecycle stays harness
 | Capability | Supported | Notes |
 |---|---|---|
 | isolated worker (fresh context) | yes | one worker per task; it never inherits the orchestrator's history |
-| filesystem-isolated worker | yes | `isolation: "worktree"` — a private git worktree per worker |
-| concurrent workers | yes | dispatch all independent workers in **one** message so they run at once |
+| filesystem-isolated worker | yes | `isolation: "worktree"` — a private git worktree per worker. Files only: see **A worktree is not a lane** below |
+| concurrent workers | yes | dispatch all independent workers in **one** message so they run at once. How many is decided by the plan's dependency graph and `workspace.lanes`, not by this adapter |
 | background workers | yes | `run_in_background: true`; the orchestrator is re-invoked on completion |
 | effort levels | `low` / `standard` / `deep` | map to `model: haiku` / `sonnet` / `opus`. The level comes from the plan task's `**Effort:**` line, not from the dispatcher — it also fixed how much code that task carries. Never omit `model`: a worker with no model inherits the session's, which under Night Shift's routing may be the dearest tier — `deep` is Opus, not "whatever the orchestrator runs on" |
 | structured completion output | no | workers return prose. The orchestrator re-derives every claim from the diff — see limits |
@@ -30,16 +30,33 @@ Agent({
 })
 ```
 
-**`isolation: "worktree"` is for concurrency, not for hygiene.** A dependent chain runs
-one worker at a time in the shared workspace — giving each of those its own worktree only
-adds merges. Use it when two or more workers run at the same time and could touch the same
-tree.
+**`isolation: "worktree"` is for concurrency, not for hygiene.** Two tasks that the graph
+forces into sequence run one at a time in the shared workspace — giving each of those its own
+worktree only adds merges. Use it when two or more workers run at the same time and could
+touch the same tree.
 
-A worker brief is self-contained: workspace path, the task's own text from the frozen plan,
-the exact files it may create/modify, the project conventions it must follow, the
-verification commands with their expected output shape, `kerbe.constraints` verbatim, the
-deviation protocol (what to do when the plan and the codebase disagree — the lifecycle skill
-owns its wording), and the two git rules (stage named paths only; commit scoped by pathspec).
+**A worktree is not a lane.** `isolation: "worktree"` gives a worker its own *files*; it does
+not give it anywhere to run the tests. A fresh worktree has source and no installed
+dependencies, and on a stack whose test command is bound to a container it has no runner at
+all. So a dispatch carries both:
+
+| Task | Gets |
+|---|---|
+| lane-free (every case `unit`) | a worktree + `workspace.worktree_setup_cmds`. No lane, no container. |
+| lane-bound (any `kernel`/`http`/`browser` case) | a worktree + a lane index, and every command wrapped in `stack.exec` with `{lane}` resolved to that index |
+
+The orchestrator resolves `{lane}` before the brief is written — a worker must never be left
+to work out which environment it is verifying against. With `workspace.lanes > 1` and no
+`{lane}` in `stack.exec`, do not dispatch at all: every lane would route to the same
+environment, producing workers that edit files and verify nothing.
+
+A worker brief is self-contained: workspace path (and its worktree path and resolved lane
+wrapper when it runs outside lane 0), the task's own text from the frozen plan with its case
+table and `Level` column intact, the exact files it may create/modify, the project
+conventions it must follow, the verification commands with their expected output shape,
+`kerbe.constraints` verbatim, the deviation protocol (what to do when the plan and the
+codebase disagree — the lifecycle skill owns its wording), and the two git rules (stage named
+paths only; commit scoped by pathspec).
 
 ## Session roots
 

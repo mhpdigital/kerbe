@@ -12,15 +12,19 @@ git-tracked, and editable by the user — their edits stand.
 **Slice:** {slice-id}
 **Workspace:** {path}  ·  **Branch:** {branch}
 **Plan:** {planning_root}/{slice}/PLAN.md  ·  **Started:** {YYYY-MM-DD}
-**Executor:** {adapter}  ·  **Shape:** chain | group
+**Executor:** {adapter}  ·  **Lanes:** {n} ({lane-free tasks run in a worktree, no lane})
 **Tests:** {n} passing, {n} failing  ({command}, {date})
 
 ## Position
-| Plan task | Status | Worker | Evidence |
-|---|---|---|---|
-| Task 1: {deliverable} | done | W-A | {commit} · full suite pasted {date} |
-| Task 2: {deliverable} | in progress | W-B | — |
-| Task 3: {deliverable} | todo | — | — |
+| Plan task | Depends | Lane | Status | Worker | Evidence |
+|---|---|---|---|---|---|
+| Task 1: {deliverable} | none | 0 | done | W-A | {commit} · full suite pasted {date} |
+| Task 2: {deliverable} | 1 | 1 | in progress | W-B | — |
+| Task 3: {deliverable} | 1 | none | todo | — | — |
+
+`Depends` is copied from the plan task, not re-derived here — the tracker records what was
+scheduled so a resumed session rebuilds the same queue. `Lane` is `none` for a lane-free
+(all-`unit`) task, `0` for the workspace, `1..n` for an extra lane.
 
 Status vocabulary: `todo` · `in progress` · `done` · `blocked` · `parked`.
 `done` requires evidence in the row — a commit, and for a global-effect task the full-suite

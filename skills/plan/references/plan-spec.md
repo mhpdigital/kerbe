@@ -54,10 +54,22 @@ gate. Fold setup, configuration, scaffolding and docs into the task whose delive
 them; split only where a reviewer could reject one task while approving its neighbour. Each
 task ends with an independently testable deliverable.
 
-Order tasks by dependency, and say which is which: a task consuming an earlier task's output
-is a **chain** (workers run one at a time); tasks touching disjoint files are a **group**
-(workers run concurrently). `/kerbe:implement` reads this to choose how to dispatch, so
-state it rather than leaving it to be inferred from the prose.
+Order tasks by dependency, and **declare each task's dependencies on its own `**Depends:**`
+line** — `none`, or the task numbers it consumes. `/kerbe:implement` builds a graph from
+these and schedules everything the graph leaves free to run at once, so the declaration is
+what decides whether two independent tasks are actually built in parallel.
+
+There is no per-plan "chain" or "group" label any more, and there must not be one: a single
+word for a whole plan cannot say that tasks 2 and 3 are independent while 4→5→6 is a genuine
+chain, so it serialises the pair for nothing.
+
+Declare the dependency that is real, not the one that feels safe. `/kerbe:implement` also
+derives edges independently — from `Interfaces` (one task's `Consumes` naming another's
+`Produces`) and from `Files` (one task modifying what another creates) — and schedules on
+the **union** of declared and derived. A declared edge the derivation cannot see is
+legitimate when it is a real ordering constraint with no named seam (a migration that must
+land before a test touching the schema); say so in one line where it is not obvious.
+Over-declaring costs concurrency; under-declaring costs a race the union usually catches.
 
 ## Effort per task — decided here, not at dispatch
 
@@ -110,10 +122,49 @@ written before any code exists is largely a guess about fixtures, container acce
 helpers and database reset — and when that guess is wrong the worker edits the test, which
 rewrites the spec with nobody watching.
 
-So Step 1 names the test file and class and lists the cases as a table: input or
+So Step 1 names the test file and class and lists the cases as a table: **level**, input or
 precondition, expectation, and the `@req` it discharges. Write the test code in full only
 where the harness **is** the requirement (a security boundary, a cross-tenant assertion, a
 serialisation contract), and at `low` effort, which gets everything in full.
+
+### The Level column — decided per case, not per file
+
+| Level | Means | Symfony | Flutter |
+|---|---|---|---|
+| `unit` | subject constructed directly, collaborators stubbed, no framework | `extends TestCase` | plain `test()` |
+| `kernel` | needs DI wiring, configuration, or the database — but not HTTP | `extends KernelTestCase` | needs bindings//DB |
+| `http` | needs a request through the framework | `extends WebTestCase` | widget + router |
+| `browser` | needs a real browser (client-side behaviour) | Panther | integration_test |
+
+**The rule: boot the framework only when the framework is part of the claim.** If the case
+would pass with the subject constructed directly and its collaborators stubbed, it is `unit`.
+If what is asserted is the wiring, the mapping, the security configuration, the SQL, or the
+HTTP response, it needs the framework and stays.
+
+Level is chosen **per case**, which is the point: one task honestly carries twelve `unit`
+cases and one `http` case, and that is the shape most tasks should have. A whole table set
+to `http` because the base class can assert anything is the default this column exists to
+stop — on a real slice that habit produced a gate suite where a sixth of the tests cost a
+thousandth of the runtime, and every task touching a global-effect artifact paid the rest.
+
+### The acceptance floor — three promise classes that `unit` cannot discharge
+
+A planner may not satisfy these with `unit` cases. Each needs at least one `http` case,
+because each is a claim about something only a real request exercises:
+
+1. **Audience reachability** — a promised route is reachable by the promised audience.
+   The assertion is against the security configuration, not the controller.
+2. **Action chain** — a promised CTA reaches a route that exists and acts on the promised
+   object. Followed one hop, for real.
+3. **State transition observable through HTTP** — where the promise is that a user can reach
+   a state, the transition's precondition is shown producible *through the interface*. That a
+   method with the right name exists is not the promise.
+
+A fourth floor: a claim that is inherently client-side (a payment element mounting, a
+dropdown opening) needs a `browser` case and is not satisfiable at any lower level.
+
+These floors are why pushing cases down to `unit` is safe. They are the cases that catch the
+defects nothing else catches, and they stay.
 
 A case value is a decision the plan made. A worker may add cases, and may name and structure
 the test however the harness demands, but may never change a case value — that is a
@@ -139,6 +190,7 @@ Counts are welcome as evidence *after* a run, in the tracker. They are not a gat
 ### Task N: {deliverable}
 
 **Effort:** low | standard | deep
+**Depends:** none | 2, 3
 **Files:**
 - Create: `exact/path/to/file`
 - Modify: `exact/path/to/existing:123-145`
@@ -156,8 +208,8 @@ normal state at `low` and `standard`; at `deep`, an open item names what the wor
 settle and report — and it must be answerable **from the codebase**, by someone reading it.
 Say what is already settled alongside it, so the open ground is bounded.
 
-- [ ] **Step 1: Write the failing test** — the case table (the test code itself at `low`, or
-      where the harness is the requirement)
+- [ ] **Step 1: Write the failing test** — the case table, `Level` column first (the test
+      code itself at `low`, or where the harness is the requirement)
 - [ ] **Step 2: Run it, confirm it fails** — the command, and the shape of the failure
 - [ ] **Step 3: Minimal implementation** — the code at `low`; at `standard` and `deep`, the
       deciding fragments and the existing pattern to follow
@@ -187,6 +239,8 @@ These are plan failures, not shorthand:
 - "similar to Task N" — repeat it; tasks are read out of order and in isolation
 - a step that says what to do without saying what must be true when it is done
 - a reference to a type, function or route defined in no task
+- a case table with no `Level` column, or `**Depends:**` omitted — both are read by the
+  scheduler, and a missing one is not a default, it is a task that cannot be placed
 - an unresolved question parked in the plan ("open question", "to be decided", "decide
   later") — the plan is where questions get answered, and at freeze there are none left. A
   `deep` task's `Decisions` block is the one legal home for open ground, and it says what the
@@ -229,5 +283,14 @@ Run this yourself — it is a checklist, not a dispatch:
    cannot ask anyone: a worker at 3am.
 7. **Command provenance** — every command quoted appears in the stack adapter's
    `commands.md`.
+8. **Dependency graph** — every task carries `**Depends:**`; every number names a task that
+   exists; there is no cycle. Then read it for *over*-declaration: a dependency that is not
+   a consumed seam and not a shared file is serialisation you are paying for, so either
+   justify it in a line or drop it.
+9. **Levels** — every case carries a level, and every case that reaches for `kernel`, `http`
+   or `browser` needs what that level provides. Walk the `http` cases against the acceptance
+   floor in both directions: a floor promise with no `http` case is a hole, and an `http`
+   case that asserts nothing about wiring, audience or a real request is a `unit` case
+   wearing an expensive harness.
 
 Fix inline and move on; no second review pass.

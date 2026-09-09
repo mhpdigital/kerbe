@@ -102,7 +102,7 @@ briefs and reports go in the slice's visible planning folder.
 
 If the user edits the tracker — reorders, removes, rewrites — those edits stand.
 
-## Step 3 — choose the execution shape (from the plan, not from preference)
+## Step 3 — build the schedule (from the plan's graph, not from a label)
 
 Two **orthogonal** axes. Never conflate them.
 
@@ -112,17 +112,60 @@ own red → green → commit and reports back briefly. "Sequential" is a stateme
 (≤2 tasks), where the overhead outweighs the benefit — and the `inline` executor adapter
 already describes what you give up.
 
-**Concurrency — read it off the plan's dependency structure.**
+**Concurrency — computed from a dependency graph.** There is no per-plan chain/group label:
+one word for a whole plan cannot say that tasks 2 and 3 are independent while 4→5→6 is a
+genuine chain, and reading it as a chain serialises the pair for nothing.
 
-| Plan shape | Dispatch |
-|---|---|
-| **chain** — each task consumes an earlier task's output (backend, migration, importer slices) | workers run **one at a time, in order**, in the shared workspace. Do not fan out: they would serialise anyway and collide. |
-| **group** — tasks touch disjoint files (pages, templates, styles, endpoints) | workers run **concurrently**, each filesystem-isolated per the executor adapter, dispatched together in one go. |
+### 3a — build the graph
 
-Group membership is a **file-ownership contract**: each worker's brief names the files it
-owns, no two workers own the same file, a template and the styles and controller serving it
-belong to one worker, and end-to-end browser tests always come last, after the features
-they exercise work.
+Take the **union** of two sources, and never just one:
+
+- **declared** — each task's `**Depends:**` line
+- **derived** — task B depends on A when B's `Interfaces: Consumes` names anything in A's
+  `Interfaces: Produces`, or B's `Files: Modify` names anything in A's `Files: Create`
+
+The union is the safe direction: a missing edge causes a race, a spurious edge only costs
+serialisation. Where the two disagree, record a **Ruling** naming the task and the edge and
+carry on — it is a plan defect worth reading. A derived-but-not-declared edge means the
+planner missed a dependency; a declared-but-not-derived edge is either a real ordering
+constraint with no named seam (legitimate) or caution that cost concurrency.
+
+A **cycle is a hard stop**, not a Ruling: the tasks are not independently deliverable and the
+plan needs re-cutting.
+
+### 3b — resolve the lanes
+
+A **lane** is an isolated verification environment — a worktree plus what it takes to run the
+tests against it. Lane 0 is the workspace from Step 0. Resolve `workspace.lanes` (default
+`1`), `workspace.lane_setup_cmds`, and `workspace.worktree_setup_cmds`.
+
+- **`lanes > 1` and `stack.exec` has no `{lane}`** ⇒ **hard stop**, naming the key. Every
+  lane would route its commands to the same environment, and a worker that can edit files
+  while verifying nothing is the exact failure this design exists to prevent.
+- **`worktree_setup_cmds` unset** ⇒ run every task in lane 0 and **say why**. A fresh git
+  worktree has source and no installed dependencies, so a worker there cannot run its test
+  command at all.
+
+A task is **lane-free** when every case in its table is `unit`; it needs a worktree and
+`worktree_setup_cmds`, nothing more. Any other task is **lane-bound**.
+
+### 3c — dispatch from a ready queue, never in waves
+
+A wave — compute everything ready, run it all, barrier, repeat — makes every task wait for
+the slowest in its wave. That is the same waste this schedule exists to remove.
+
+1. `ready` = tasks whose dependencies are all complete and which have not started.
+2. Dispatch every lane-free ready task concurrently, each in its own worktree, no lane.
+3. Dispatch lane-bound ready tasks up to the number of free lanes.
+4. When a worker completes **and its gate passes**, recompute `ready` and refill immediately.
+   Do not wait for its siblings.
+
+The **file-ownership contract** governs whatever is running at one time: each worker's brief
+names the files it owns, no two concurrent workers own the same file, a template and the
+styles and controller serving it belong to one worker, and end-to-end browser tests always
+come last, after the features they exercise work. Where two ready tasks would own the same
+file, hold one back and record a Ruling — it is an ordering constraint the graph did not
+capture.
 
 ## Run to completion — the session does not pause
 
@@ -169,9 +212,14 @@ carries, so overriding it at dispatch hands a typist's brief to a designer or th
 task with no effort line is a plan defect — dispatch it `standard`, and record a Ruling
 saying which task and what you assumed.
 
-- the workspace path and the branch it must stay on
-- the task's own text, quoted from the frozen plan — its `Interfaces`, its case table, its
-  `Decisions` block, its `node=` design origin and its `REQ-` targets
+- the workspace path and the branch it must stay on — and, when the task runs outside lane 0,
+  its worktree path and the `stack.exec` wrapper with `{lane}` already resolved, so the
+  worker never has to work out which environment it is verifying against
+- the task's own text, quoted from the frozen plan — its `Interfaces`, its case table **with
+  the `Level` column intact**, its `Decisions` block, its `node=` design origin and its
+  `REQ-` targets. The declared level is binding: a worker may add cases at any level, but
+  moving a planned case to a cheaper level is a deviation to report, never a quiet
+  substitution
 - the exact files it may create or modify — and that it may touch nothing else
 - the project conventions it must follow, from the stack adapter
 - the verification commands with the expected output shape, quoted from `commands.md`
@@ -232,18 +280,28 @@ A task is done when its evidence says so, not when its report does.
    that exist pass, not that they are the tests the plan asked for. Compare the task's case
    table against the diff: a case missing, or a value changed to something the worker could
    make pass, is a deviation whether or not it was reported. Added cases are fine.
-5. Tick the tracker **as each task completes**, not in bulk at the end, and record blockers
+5. **Check the declared level against the harness the worker actually used.** The diff says
+   which base class each test extends; the case table says which level the plan bought. A
+   mismatch is a deviation, reported rather than absorbed. The dangerous direction is
+   **declared `http`, written as `unit`** — that silently drops an acceptance floor, and the
+   suite stays green while the promise stops being checked. The reverse (declared `unit`,
+   written against the framework) is waste rather than risk, but it is still a deviation:
+   the plan costed that task as lane-free and it was not.
+6. Tick the tracker **as each task completes**, not in bulk at the end, and record blockers
    and deviations where they happen. Do not stop to ask whether to continue.
 
 ## Step 6 — integrate
 
 1. Verify no two workers touched the same file; resolve overlaps before merging.
 2. Merge concurrent workers' branches back into the slice branch.
-3. Run the full suite on the merged result — the per-task gate does not make this optional,
-   because merges create interactions no single task's run could see.
+3. Run the full suite on the merged result **in lane 0** — the per-task gate does not make
+   this optional, because merges create interactions no single task's run could see, and a
+   per-lane green is a claim about that lane's tree only.
 4. Failures: attribute to the worker whose change caused them. Small ones you fix in the
    workspace; a large one gets a focused fix worker with the same brief discipline.
-5. Update the tracker, and stamp `TIMING.md`'s implement row with
+5. Run `workspace.lane_teardown_cmds` for every lane above 0. Lane 0 is the workspace and is
+   never torn down here.
+6. Update the tracker, and stamp `TIMING.md`'s implement row with
    `TZ='{kerbe.timezone}' date '+%Y-%m-%d %H:%M'` (timestamp only, no effort).
 
 ## Step 7 — hand off
@@ -279,6 +337,11 @@ rather than a plan:
 - Every task's file list is its contract — a worker that edits outside it gets reverted, not
   rationalised.
 - Effort comes from the plan's task, never from preference at dispatch, and never inherited.
+- Concurrency comes from the dependency graph, never from a label and never from appetite.
+  A cycle stops the run; a disagreement between declared and derived edges is a Ruling.
+- A case's level is the plan's decision. A worker that writes a planned `http` case as a
+  `unit` test has dropped an acceptance floor, and a green suite cannot show it — the gate
+  reads the base class in the diff, not the report.
 - A worker may add cases; a case value the plan specified is changed only by reporting a
   deviation. An edited case value that arrives unreported is the one failure mode a green
   suite cannot show you.

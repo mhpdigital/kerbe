@@ -12,14 +12,14 @@ GOOD = """# Cards — Implementation Progress
 **Slice:** cards
 **Workspace:** ~/projects/demo-cards  ·  **Branch:** slice/cards
 **Plan:** planning/slices/cards/PLAN.md  ·  **Started:** 2026-08-20
-**Executor:** claude  ·  **Shape:** group
+**Executor:** claude  ·  **Lanes:** 2
 **Tests:** 12 passing, 0 failing (`php vendor/bin/phpunit`, 2026-08-20)
 
 ## Position
-| Plan task | Status | Worker | Evidence |
-|---|---|---|---|
-| Task 1: index route | done | W-A | a1b2c3d · full suite 12/0 pasted |
-| Task 2: detail template | in progress | W-B | — |
+| Plan task | Depends | Lane | Status | Worker | Evidence |
+|---|---|---|---|---|---|
+| Task 1: index route | none | 0 | done | W-A | a1b2c3d · full suite 12/0 pasted |
+| Task 2: detail template | 1 | 1 | in progress | W-B | — |
 
 ## Worker A: routing
 - [ ] Task 1
@@ -56,6 +56,21 @@ def run(text, plan=None):
 
 
 class CheckProgressTest(unittest.TestCase):
+    def test_narrow_table_without_scheduling_columns_still_parses(self):
+        """A tracker written before Depends/Lane existed must still score."""
+        narrow = GOOD.replace(
+            "| Plan task | Depends | Lane | Status | Worker | Evidence |\n"
+            "|---|---|---|---|---|---|\n"
+            "| Task 1: index route | none | 0 | done | W-A | a1b2c3d · full suite 12/0 pasted |\n"
+            "| Task 2: detail template | 1 | 1 | in progress | W-B | — |",
+            "| Plan task | Status | Worker | Evidence |\n"
+            "|---|---|---|---|\n"
+            "| Task 1: index route | done | W-A | a1b2c3d · full suite 12/0 pasted |\n"
+            "| Task 2: detail template | in progress | W-B | — |")
+        self.assertNotIn("Depends", narrow)
+        code, out = run(narrow, PLAN)
+        self.assertEqual(code, 0, out)
+
     def test_good_tracker_passes(self):
         code, out = run(GOOD)
         self.assertEqual(code, 0, out)

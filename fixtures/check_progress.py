@@ -18,16 +18,24 @@ HEADER_FIELDS = ("Slice", "Workspace", "Branch", "Plan")
 
 
 def rows(text):
-    """Position-table rows as (task, status, worker, evidence)."""
+    """Position-table rows normalised to (task, status, worker, evidence).
+
+    The table carries scheduling columns (Depends, Lane) between the task and its
+    status, so the status cell is located by its vocabulary rather than by index.
+    Pinning the width instead makes a widened tracker parse to zero rows, which
+    reads as an empty table rather than as a parser that no longer fits.
+    """
     out = []
     for line in text.splitlines():
         if not line.strip().startswith("|"):
             continue
         cells = [c.strip() for c in line.strip().strip("|").split("|")]
-        if len(cells) != 4:
+        if len(cells) < 4:
             continue
-        if cells[1].lower() in STATUSES:
-            out.append(cells)
+        at = next((i for i, c in enumerate(cells) if c.lower() in STATUSES), None)
+        if at is None or at == 0 or at + 2 >= len(cells):
+            continue
+        out.append([cells[0], cells[at], cells[at + 1], cells[at + 2]])
     return out
 
 

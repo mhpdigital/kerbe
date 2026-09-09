@@ -108,6 +108,20 @@ real use:
    carries its code in full. Interfaces list only what another task, a specified test or a
    later slice consumes — an internal helper or a locally-caught exception class in an
    Interfaces block is a fail. No task leaves a decision open at `standard` or `low`.
+7. **Read the graph and the levels** — also beyond what the script can judge.
+   `check_plan.py` proves `**Depends:**` parses, names real tasks and has no cycle; it cannot
+   tell whether the edges are *true*. A dependency that is neither a consumed seam nor a
+   shared file is serialisation the plan is paying for — a plan whose every task depends on
+   its predecessor, on a slice with genuinely independent work, is a fail even though it
+   scores clean.
+   Then the levels, in both directions:
+   - a case whose expectation names a **route, status code, role, or rendered element** but is
+     declared `unit` is a fail — that is an acceptance floor being discharged on the cheap
+   - a case that asserts pure logic (a guard, a transition allow-list, a normaliser) but is
+     declared `kernel` or `http` is a fail — the expensive default this column exists to stop
+   - each of the three floor classes present in the slice (audience reachability, action
+     chain, HTTP-observable state transition) has at least one `http` case, and an inherently
+     client-side claim has a `browser` case
 
 ## kerbe:implement gate
 
@@ -118,11 +132,23 @@ covers the two things that are checkable offline and the rest is stated as a gap
 1. `python3 -m unittest tests.test_check_progress tests.test_portability`.
 2. **Tracker derivation, dry run.** Copy `symfony-mini` to a scratch dir and dispatch a
    fresh subagent: read `<repo>/skills/implement/SKILL.md`, execute Steps 0–3 **only**
-   (resolve the workspace, derive the tracker, choose the execution shape) against the
-   scratch copy with `workspace.root` unset, and dispatch nothing. Score:
+   (resolve the workspace, derive the tracker, build the schedule) against the scratch copy
+   with `workspace.root` unset, and dispatch nothing. Score:
    `python3 fixtures/check_progress.py <scratch>/claude-progress.md <scratch>/planning/slices/cards/PLAN.md`
-   — exit 0 required, and the report must name the execution shape (chain vs group) with the
-   plan evidence for it.
+   — exit 0 required.
+
+   Then read the report for the schedule, which the script cannot score. It must name the
+   **ready queue** and the **lane assignment**, with the graph as its evidence. The fixture
+   plan carries a deliberate diamond (T3 and T4 both depend on T2 and on nothing else) and a
+   deliberate lane-free task (T5, all `unit` cases). Three failures to watch for, each of
+   which scores clean:
+   - **T3 and T4 scheduled one after the other** — the graph was read as a chain, which is
+     the whole defect the per-task `Depends:` line replaced
+   - **T5 given a lane** — a unit-only task needs a worktree and a dependency install, not a
+     container
+   - **any fan-out proposed with `workspace.lanes` unset (⇒ 1) and no `worktree_setup_cmds`** —
+     that config runs everything in lane 0, and the report must say so rather than promising
+     concurrency the project cannot host
 3. **The per-task gate is the part that matters most and cannot be fixture-tested.** It is
    validated on the first real slice run: a task touching a global-effect artifact must be
    refused as done until the full-suite output is pasted. Record the result below.
@@ -133,6 +159,14 @@ covers the two things that are checkable offline and the rest is stated as a gap
    section rather than a silent conformance. An unattended run with a green suite and an
    empty Deviations section on a plan written before the code existed is the failure this
    gate is looking for.
+5. **Level provenance**, first-real-run: the gate compares each task's declared case levels
+   against the base classes in the diff. The failure to hunt for is a planned `http` case
+   written as a `unit` test — it drops an acceptance floor, and the suite stays green while
+   the promise stops being checked, so no other check in this gate can see it.
+6. **Lane routing**, first-real-run and only where `workspace.lanes > 1`: each concurrent
+   worker's pasted command output shows the lane's own environment, not lane 0's. Two
+   workers whose evidence cites the same container are two workers that raced on one
+   database, and their green runs mean nothing.
 
 ## kerbe:bug gate
 
