@@ -12,7 +12,7 @@ completion report". This file owns the mechanism, so the lifecycle stays harness
 | filesystem-isolated worker | yes | `isolation: "worktree"` — a private git worktree per worker |
 | concurrent workers | yes | dispatch all independent workers in **one** message so they run at once |
 | background workers | yes | `run_in_background: true`; the orchestrator is re-invoked on completion |
-| effort levels | `low` / `standard` / `deep` | map to `model: haiku` / `sonnet` / `opus`. Never omit `model`: a worker with no model inherits the session's, which under Night Shift's routing may be the dearest tier — `deep` is Opus, not "whatever the orchestrator runs on" |
+| effort levels | `low` / `standard` / `deep` | map to `model: haiku` / `sonnet` / `opus`. The level comes from the plan task's `**Effort:**` line, not from the dispatcher — it also fixed how much code that task carries. Never omit `model`: a worker with no model inherits the session's, which under Night Shift's routing may be the dearest tier — `deep` is Opus, not "whatever the orchestrator runs on" |
 | structured completion output | no | workers return prose. The orchestrator re-derives every claim from the diff — see limits |
 
 ## Invoke
@@ -37,8 +37,9 @@ tree.
 
 A worker brief is self-contained: workspace path, the task's own text from the frozen plan,
 the exact files it may create/modify, the project conventions it must follow, the
-verification commands with expected output, `kerbe.constraints` verbatim, and the two git
-rules (stage named paths only; commit scoped by pathspec).
+verification commands with their expected output shape, `kerbe.constraints` verbatim, the
+deviation protocol (what to do when the plan and the codebase disagree — the lifecycle skill
+owns its wording), and the two git rules (stage named paths only; commit scoped by pathspec).
 
 ## Session roots
 
@@ -90,9 +91,15 @@ markers:
 ## Output contract
 
 The worker's final message is its completion report and must carry: what it changed
-(paths), the verification commands it ran with **pasted output**, anything it could not do,
-and any ruling it made. Intent is not evidence — a report with no pasted command output is
-an **unverified** task, and the orchestrator treats it as such.
+(paths), the verification commands it ran with **pasted output**, every **deviation** from
+the plan as *plan said / found / did*, anything it could not do, and any ruling it made.
+Intent is not evidence — a report with no pasted command output is an **unverified** task,
+and the orchestrator treats it as such.
+
+Deviations carry the most information per line in the whole report: the plan was written
+before the code existed, so the places it was wrong are exactly what the next reader needs.
+A worker that conforms silently to a plan that did not match the codebase produces a green
+run and a false record.
 
 ## Limits
 

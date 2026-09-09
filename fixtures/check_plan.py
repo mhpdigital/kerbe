@@ -22,8 +22,15 @@ PLACEHOLDERS = (
     r"handle edge cases",
     r"similar to task \d",
     r"write tests for the above",
+    r"open questions?:",
+    r"to be decided",
+    r"decide (?:this )?later",
 )
 BAD_ADD = (r"git add -A\b", r"git add \.(?:\s|$)", r"git add \*")
+# Expected output is a shape, not a count: an assertion tally is wrong the moment a
+# worker adds an assertion the plan welcomed.
+ASSERTION_COUNT = r"\(\s*\d+\s+tests?\s*,\s*\d+\s+assertions?\s*\)"
+EFFORT = r"^\*\*Effort:\*\*\s*(low|standard|deep)\s*$"
 STATUS_OK = 0
 
 
@@ -73,6 +80,11 @@ def main(argv):
     for i, body in enumerate(tasks, start=1):
         tag = "task %d" % i
         check(tag + " lists Files", "**Files:**" in body)
+        check(tag + " declares an Effort level",
+              bool(re.search(EFFORT, body, re.M)),
+              "**Effort:** low | standard | deep — it sets the code boundary")
+        check(tag + " has an Interfaces block", "**Interfaces:**" in body,
+              "seams only; say none rather than omitting it")
         steps = re.findall(r"^- \[ \] ", body, re.M)
         check(tag + " has checkbox steps", len(steps) >= 3, "%d found" % len(steps))
         check(tag + " starts with a failing test",
@@ -91,6 +103,11 @@ def main(argv):
     for pat in PLACEHOLDERS:
         hits = re.findall(pat, text, re.I)
         check("no placeholder %r" % pat.replace("\\b", ""), not hits, str(hits[:3]))
+
+    counts = re.findall(ASSERTION_COUNT, text)
+    check("expected output is a shape, not an assertion count", not counts,
+          "%s — state what must be observable (zero failures, the class in the run)"
+          % str(counts[:3]))
 
     if design_required:
         check("header Design line records the measured design",

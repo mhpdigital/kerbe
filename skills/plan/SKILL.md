@@ -84,13 +84,21 @@ someone will build from whatever the template already says.
 ## Step 3 — author the plan
 
 Follow `references/plan-spec.md` — the required header, the file-structure map, task
-right-sizing, bite-sized TDD steps with real code and real expected output, and the
-no-placeholder rules. It is self-contained: this skill has **no external skill dependency**.
+right-sizing, the per-task effort level and the code boundary it sets, the seam rule, case
+tables, bite-sized TDD steps, and the no-placeholder rules. It is self-contained: this skill
+has **no external skill dependency**.
+
+**Decide each task's effort level as you write it**, and let it set how much code the task
+carries: `low` is a typist and gets the code in full; `standard` and `deep` get seams, cases
+and deciding fragments, never bodies. A plan of pasted implementations is not a safer plan —
+it is a plan whose every body was written against a codebase that does not exist yet, and
+whose reviewer stops reading. The plan-spec's Effort and seam-rule sections are the authority.
 
 *If `superpowers:writing-plans` is installed you may use it to author instead* — it covers
 the same ground — but apply the two overrides below and the kerbe-specific additions from
-`references/plan-spec.md` (Global Constraints content, node ids, `@req` targets,
-adapter-sourced verification commands). Without it, nothing is missing.
+`references/plan-spec.md` (Global Constraints content, effort levels, the seam rule, case
+tables, node ids, `@req` targets, adapter-sourced verification commands). Without it, nothing
+is missing.
 
 **The two overrides, always:**
 
@@ -117,12 +125,25 @@ here, with exact values:
 
 ## Step 5 — self-review, then freeze
 
-Run the self-review in `references/plan-spec.md` (spec coverage, placeholder scan, type
-consistency), then the structural check:
+Run the self-review in `references/plan-spec.md` (spec coverage, placeholder scan, seam
+consistency, effort and code boundary, open decisions, command provenance), then the
+structural check:
 
 ```bash
 python3 {plugin}/fixtures/check_plan.py {planning_root}/{slice}/PLAN.md
 ```
+
+**Freezing is what closes the decisions.** A plan is frozen so workers can be dispatched
+against it, including into unattended runs where nobody is awake to answer a question. So an
+unresolved decision does not freeze: settle it now, or raise the task to `deep` and write in
+its `Decisions` block what that worker is to settle and report. "The implementer can decide"
+is a plan that has moved a planning question into a night session — the one place it cannot
+be asked.
+
+**The `deep` route is only for questions the codebase answers.** A question that needs a
+person to choose — scope, a product rule, a policy, a value nobody has set — is a spec gap,
+and no effort level converts it into work. Send it back through `/kerbe:start`, and freeze
+the rest.
 
 Fix what it reports; it checks structure, not judgment. Commit the plan **in the planning
 repo, scoped by pathspec** — `git -C {planning_repo} commit -m "..." -- <slices>/{slice}/PLAN.md`
@@ -195,8 +216,13 @@ Then, four changes to the authoring rules:
 
 - A frozen plan is amended by **writing a dated amendment section at its end**, never by
   editing a task a worker may already have read.
-- No placeholders. "TBD", "handle edge cases", "similar to Task 3", a code step with no code
-  — each is a plan defect, not a shortcut.
+- Every task carries an effort level, and the level sets the code boundary: full code at
+  `low`, seams and cases at `standard` and `deep`.
+- Interfaces carry **seams only** — what another task, a specified test, or a later slice
+  consumes. An internal helper or an exception class caught inside the same task is the
+  worker's to name, and listing it is a defect, not thoroughness.
+- No placeholders. "TBD", "handle edge cases", "similar to Task 3", an unanswered question,
+  a test step with neither cases nor code — each is a plan defect, not a shortcut.
 - The plan quotes commands from the stack adapter. A command that appears nowhere in
   `commands.md` is either a gap in the adapter (fix it there) or an invention (drop it).
 - Any change to this skill or `references/plan-spec.md` must pass the plan gate in

@@ -85,11 +85,14 @@ real use:
 1. `python3 -m unittest tests.test_check_plan tests.test_portability` — structural checker
    and the portability invariants (no harness mechanism in a skill body, no hardcoded
    project path).
-2. Copy `symfony-mini` to a scratch dir. The fixture slice deliberately ships **no**
-   `SETTINGS.md`: dispatch a fresh subagent to read `<repo>/skills/plan/SKILL.md` and run it
-   on the scratch slice `cards`. It must **STOP at the design gate** and say the slice never
-   answered the design question. A run that proceeds — or defaults `design_required` to
-   false — is a gate failure, and the wording needs fixing.
+2. Copy `symfony-mini` to a scratch dir and **delete the slice's `PLAN.md` in the scratch
+   copy** — the fixture's plan is a coverage stub, and leaving it in place resolves the run
+   to remediation mode before the design gate is ever reached, which tests a different
+   thing. The fixture slice deliberately ships **no** `SETTINGS.md`: dispatch a fresh
+   subagent to read `<repo>/skills/plan/SKILL.md` and run it on the scratch slice `cards`. It
+   must **STOP at the design gate** and say the slice never answered the design question. A
+   run that proceeds — or defaults `design_required` to false — is a gate failure, and the
+   wording needs fixing.
 3. In the scratch copy only, write `SETTINGS.md` with `design_required: true` and a dated
    Notes reason, and re-dispatch. It must now demand the Design-sources block, find it
    populated in `UI_ELEMENTS.md`, and write `planning/slices/cards/PLAN.md` (overwriting the
@@ -99,6 +102,12 @@ real use:
    exit 0 required.
 5. Read the report: the plan's Global Constraints must quote the stack adapter's
    `commands.md` full-suite trigger, and every UI task must carry `node=… measured=…`.
+6. **Read the code boundary** — the part `check_plan.py` cannot judge. Every task carries an
+   effort level; a `standard` or `deep` task states seams and cases and does **not** paste
+   implementation bodies the cases and the named pattern already determine; a `low` task
+   carries its code in full. Interfaces list only what another task, a specified test or a
+   later slice consumes — an internal helper or a locally-caught exception class in an
+   Interfaces block is a fail. No task leaves a decision open at `standard` or `low`.
 
 ## kerbe:implement gate
 
@@ -117,6 +126,13 @@ covers the two things that are checkable offline and the rest is stated as a gap
 3. **The per-task gate is the part that matters most and cannot be fixture-tested.** It is
    validated on the first real slice run: a task touching a global-effect artifact must be
    refused as done until the full-suite output is pasted. Record the result below.
+4. **Effort provenance and the deviation protocol**, also first-real-run: every dispatch's
+   effort level matches its task's `**Effort:**` line rather than the dispatcher's judgment,
+   every brief carries the deviation protocol verbatim, and a task whose plan text did not
+   match the codebase produces a *plan said / found / did* entry in the tracker's Deviations
+   section rather than a silent conformance. An unattended run with a green suite and an
+   empty Deviations section on a plan written before the code existed is the failure this
+   gate is looking for.
 
 ## kerbe:bug gate
 
@@ -158,4 +174,5 @@ Any change to `skills/review/` or the `risk-tiers.md` adapters reruns before rea
 | 2026-08-20 | — (offline gates only) | — | kerbe:plan / kerbe:implement / kerbe:bug ported. Deterministic gates PASS: 52 unit tests green (`check_plan`, `check_progress`, portability invariants — harness-neutrality grep clean, both stack adapters declare every command capability and impact kind). **Pending, stated:** the three subagent fixture runs above (plan design-gate stop + authoring, implement tracker dry run) and the two first-real-run validations (implement per-task full-suite gate, bug impact table). |
 | 2026-08-20 | first real run: `kerbe:bug` × 6 blockers (subscription) | opus | **PASS on the method, one gap found.** Impact analysis held across all six: R1-04's table found a second unattached-card site (`setDefault`) the report never mentioned, R1-01's tests followed the link rather than asserting a route name, R1-03 distinguished a scheduled cancel from a lapsed one. Commit discipline held — four pathspec-scoped commits with root-cause bodies, three entangled defects on one path deliberately committed together. **Gap: every commit cited per-file evidence (17/17, 19/19, 21/21 in the file) and no full-suite run.** The diffs changed `SubscriptionLifecycle::reactivate()` and `SubscriptionPlanRepository`, both consumed well outside the diff, yet the Symfony global-effect list is artifact-shaped (entity/migration/config/fixtures) and did not name them. Adapter hardened with a behavioural row (callers outside the diff, grep before deciding). |
 | 2026-08-20 | first real run, part 2: the implement/bug full-suite gate (subscription) | opus | **Gap from the run above closed, and a second trap found.** Full suite green — `--testsuite 'Project Test Suite'` 1480 tests / 5438 assertions, no errors, no failures. The first attempt looked red (76 errors) because a bare `php vendor/bin/phpunit` runs *every* suite the config declares, including a Browser suite of 81 Panther tests that cannot run in that container (dead ChromeDriver) and hit a pre-existing `profession_id` FK. Zero errors outside `Tests\Browser`, and the four fix commits touch no entity and no migration, so no regression. Adapter hardened: `commands.md` now carries **Which suite is the gate** — name the suite explicitly, report a browser/e2e suite as a separate claim with its own prerequisites. A gate command that quietly includes an unrunnable suite reads as broken code; one that quietly excludes e2e hides real failures. |
+| 2026-09-09 | plan gate: symfony-mini scratch × 2 (stop + authoring) | sonnet | **PASS — the code-boundary change.** Effort level is now a per-task plan field and sets how much code the task carries (full at `low`, seams + cases at `standard`/`deep`); Interfaces carry seams only; Step 1 carries a case table, not a test file; expected output is a shape, not a count. Offline: 57 tests green. **Stop run:** resolved build mode, stopped at the missing `SETTINGS.md`, refused to default `design_required` to false on a slice that visibly has UI. **Authoring run:** `ALL PASS`, 476 lines, effort spread 5 `standard` / 1 `low` / 1 `deep`, and the only fenced code in the plan is the `low` task's two-line Sass import — the boundary held without a rule per task. Two fixes the runs produced: (1) the gate's stop step now deletes the fixture's coverage-stub `PLAN.md` first, since leaving it resolves the run to remediation mode before the design gate is reached; (2) **`deep` was a parking space** — the authoring run legitimately escalated a task whose open question ("who is the member?") no spec doc answered, which is correct, but nothing stopped a planner from parking a *product* question there and freezing anyway. Spec and skill now bind the `deep` Decisions escape to questions the **codebase** can answer; a question needing a human goes back through `/kerbe:start`. |
 | 2026-08-25 | — (offline gates only) | — | kerbe:review ported from the frozen suite. Deterministic gates PASS: 60 tests green (`check_review` structure checks — QR sequence, five sections with Flags last, tier-1 line refs + ATOMIC-ITEM Open cells, coverage-vs-changed-files, strikethrough hygiene; parity — both stacks ship `risk-tiers.md`, all three tiers, tier-3 exemption bound to full-suite). §1.4 fix carried into the port: the tier-3 "trust the tests" skip does not apply when a global-effect diff shows only a scoped run. **Pending, stated:** the subagent fixture run (step 2) and first-real-review validation of the judgment half. |

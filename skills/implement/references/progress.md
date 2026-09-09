@@ -34,6 +34,9 @@ result. No evidence, not done.
 ## Blockers
 - {what, where it was hit, what it needs} — noted, moved on
 
+## Deviations
+- {plan task} — plan said {X} · found {Y} · did {Z}
+
 ## Rulings
 - {decision} — {why} — {what it costs if wrong}
 
@@ -46,6 +49,10 @@ result. No evidence, not done.
 - Ticked **as each task completes**, never in bulk at the end. A tracker updated in bulk is
   a tracker that was wrong for the whole session.
 - A blocker is recorded and stepped around, not retried in a loop.
+- A **deviation** is where the plan and the codebase disagreed and the codebase won. Record
+  it as the task lands, in the worker's own three parts. On an unattended run this section is
+  what the next human reads instead of the diff, and an empty one on a run that clearly
+  diverged means the diff still needs reading.
 - In remediation mode the "Plan task" column carries **ledger ids** instead, so a closed row
   can be re-verified against the frozen ledger without reconstructing what was fixed.
 - Never a second tracker, never a hidden dotfolder, never task-tracking tooling in place of

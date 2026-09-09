@@ -136,6 +136,11 @@ argument, and your judgment settles what neither answers. Record every such deci
 tracker as a Ruling: what you decided, why, and what it costs if wrong. A wrong ruling
 costs rework the user can see and undo; a session parked on a question costs the whole run.
 
+A **Ruling** is yours — a judgment the plan and spec left open. A **Deviation** is a
+worker's — a place the plan simply did not match the code. They go in different sections
+because they are read for different reasons: rulings tell the user what you chose, deviations
+tell them what the plan got wrong.
+
 **A blocked subtask is noted and stepped around, never retried in a loop.** Record it in
 the tracker where it happened, move to the next unblocked task, and keep working until
 nothing unblocked remains.
@@ -158,23 +163,51 @@ and never neither — a run that just trails off strands the automation watching
 
 Per the executor adapter, one worker per task, with a **self-contained** brief. **Effort
 level per task, stated explicitly on every dispatch** (the adapter maps it to a model —
-never leave the model to inherit): `standard` is the default for implementation work;
-`deep` only for a task the plan marks as tier-1 business logic, a data-model change, or a
-shared guard; `low` for mechanical tasks (fixtures, generated boilerplate, doc stubs).
+never leave the model to inherit). **Read it off the task's `**Effort:**` line in the plan**:
+the planner set it with the whole slice in view, and it also fixes how much code that task
+carries, so overriding it at dispatch hands a typist's brief to a designer or the reverse. A
+task with no effort line is a plan defect — dispatch it `standard`, and record a Ruling
+saying which task and what you assumed.
 
 - the workspace path and the branch it must stay on
-- the task's own text, quoted from the frozen plan (including its `node=` design origin and
-  `REQ-` targets)
+- the task's own text, quoted from the frozen plan — its `Interfaces`, its case table, its
+  `Decisions` block, its `node=` design origin and its `REQ-` targets
 - the exact files it may create or modify — and that it may touch nothing else
 - the project conventions it must follow, from the stack adapter
-- the verification commands with expected output, quoted from `commands.md`
+- the verification commands with the expected output shape, quoted from `commands.md`
 - every `kerbe.constraints` line, plus `kerbe.constraints_by_skill.implement`, verbatim
 - the two git rules: stage the named paths only (never `git add -A`, `git add .`,
   `git add *`), and commit scoped by pathspec (`git commit -m "..." -- <paths>`), because
   the git index is shared across concurrent sessions and a bare commit takes another
   session's staged work with it
-- what to report: files changed, commands run **with pasted output**, anything it could not
-  do
+- **the deviation protocol** (below), stated in the brief, not assumed
+- what to report: files changed, commands run **with pasted output**, deviations, anything it
+  could not do
+
+### The deviation protocol — every brief carries it verbatim
+
+A plan is written before the code exists, so parts of it will be wrong by the time a worker
+reads it. The worker needs one rule for that moment, or it will either copy the plan into a
+mismatch or diverge silently — and a silent divergence turns every later "verified against
+the plan" into a check against fiction.
+
+> Where the plan and the codebase disagree, **the codebase wins on mechanism and the case
+> table wins on behaviour.** Implement what actually compiles and passes, then report the
+> deviation as three lines — *plan said* / *found* / *did* — and carry on. Do not stop, do not
+> ask, do not quietly conform.
+>
+> **Case values are not yours to change.** Add cases freely, name and structure the test
+> however the harness requires, but a value the plan specified stays. If it cannot pass,
+> that is a deviation to report, never a test to edit.
+>
+> Anything the plan does not name is yours: internal helpers, private methods, exception
+> classes caught inside your own task, local structure. Names in the task's `Interfaces`
+> block are seams other tasks depend on — those stay exactly as written.
+
+Deviations are the run's most valuable output. Copy each one into the tracker's Deviations
+section as the task lands, so the morning read is a short list of what the plan got wrong
+rather than a diff review. A worker that reports none on a task that clearly diverged is a
+worker whose diff you read line by line.
 
 ## Step 5 — the per-task gate (this is the step that catches the expensive class)
 
@@ -195,8 +228,12 @@ A task is done when its evidence says so, not when its report does.
 3. **Blocked runner ⇒ repair it, never bypass it.** If the stack's global command refuses
    because of an unrelated pre-existing failure, fix the runner and say what you fixed. A
    documented bypass is a defect entrenched in every future session.
-4. Tick the tracker **as each task completes**, not in bulk at the end, and record blockers
-   where they happen. Do not stop to ask whether to continue.
+4. **Check the case values, not just the colour of the run.** A green suite proves the tests
+   that exist pass, not that they are the tests the plan asked for. Compare the task's case
+   table against the diff: a case missing, or a value changed to something the worker could
+   make pass, is a deviation whether or not it was reported. Added cases are fine.
+5. Tick the tracker **as each task completes**, not in bulk at the end, and record blockers
+   and deviations where they happen. Do not stop to ask whether to continue.
 
 ## Step 6 — integrate
 
@@ -241,6 +278,12 @@ rather than a plan:
   lying.
 - Every task's file list is its contract — a worker that edits outside it gets reverted, not
   rationalised.
+- Effort comes from the plan's task, never from preference at dispatch, and never inherited.
+- A worker may add cases; a case value the plan specified is changed only by reporting a
+  deviation. An edited case value that arrives unreported is the one failure mode a green
+  suite cannot show you.
+- Deviations are recorded in the tracker as they land — *plan said / found / did*. They are
+  what the next human reads instead of the diff.
 - Commit scoped by pathspec; check `git diff --cached --stat` before committing and leave
   anything you did not stage alone.
 - Never add features the plan does not call for. An improvement noticed mid-task is a note

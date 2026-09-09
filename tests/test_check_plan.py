@@ -27,16 +27,21 @@ GOOD = """# Cards — Implementation Plan
 
 ### Task 1: Card index route
 
+**Effort:** standard
 **Files:**
 - Create: `src/Controller/CardController.php`
 - Test: `tests/Controller/CardControllerTest.php`
 
+**Interfaces:**
+- Consumes: none
+- Produces: route `card_index` at `/cards`, rendering `card/index.html.twig`
+
 **Design:** node=213:2224 measured=2026-08-20
 
-- [ ] **Step 1: Write the failing test**
+- [ ] **Step 1: Write the failing test** — cases: GET `/cards` → 200; the grid container is present
 - [ ] **Step 2: Run it, confirm it fails** — `php vendor/bin/phpunit tests/Controller/CardControllerTest.php`
 - [ ] **Step 3: Minimal implementation**
-- [ ] **Step 4: Run it, confirm it passes**
+- [ ] **Step 4: Run it, confirm it passes** — zero failures, the class appears in the run
 - [ ] **Step 5: Commit**
 
 ```bash
@@ -96,6 +101,40 @@ class CheckPlanTest(unittest.TestCase):
         code, out = run(GOOD.replace("**Design:** node=213:2224 measured=2026-08-20", ""),
                         "false")
         self.assertEqual(code, 0, out)
+
+    def test_missing_effort_fails(self):
+        code, out = run(GOOD.replace("**Effort:** standard\n", ""), "true")
+        self.assertEqual(code, 1)
+        self.assertIn("declares an Effort level", out)
+
+    def test_invalid_effort_value_fails(self):
+        code, out = run(GOOD.replace("**Effort:** standard", "**Effort:** medium"), "true")
+        self.assertEqual(code, 1)
+        self.assertIn("declares an Effort level", out)
+
+    def test_every_effort_level_accepted(self):
+        for level in ("low", "standard", "deep"):
+            code, out = run(GOOD.replace("**Effort:** standard",
+                                         "**Effort:** " + level), "true")
+            self.assertEqual(code, 0, level + ": " + out)
+
+    def test_missing_interfaces_block_fails(self):
+        code, out = run(GOOD.replace("**Interfaces:**", "**Notes:**"), "true")
+        self.assertEqual(code, 1)
+        self.assertIn("has an Interfaces block", out)
+
+    def test_assertion_count_as_expected_output_fails(self):
+        code, out = run(GOOD.replace("zero failures, the class appears in the run",
+                                     "OK (4 tests, 7 assertions)"), "true")
+        self.assertEqual(code, 1)
+        self.assertIn("expected output is a shape", out)
+
+    def test_unresolved_decision_fails(self):
+        code, out = run(GOOD.replace("- Consumes: none",
+                                     "- Consumes: none (open question: which repository?)"),
+                        "true")
+        self.assertEqual(code, 1)
+        self.assertIn("no placeholder", out)
 
     def test_no_task_fails(self):
         code, out = run(GOOD.split("### Task 1")[0], "false")
