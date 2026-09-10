@@ -130,6 +130,13 @@ carry on — it is a plan defect worth reading. A derived-but-not-declared edge 
 planner missed a dependency; a declared-but-not-derived edge is either a real ordering
 constraint with no named seam (legitimate) or caution that cost concurrency.
 
+**When the derivation cannot run, say so — never simulate it.** A task source that carries no
+`Interfaces` or `Files` blocks (a checkbox stub, a remediation fix list) gives the derived
+half nothing to read. Degrade to the declared edges alone and record that you did, in one
+line. Inferring edges by eye from prose and then reporting them as *derived* is worse than
+not deriving: it presents a guess with the authority of a cross-check, and the disagreement
+Ruling — the thing that makes the union worth computing — becomes noise.
+
 A **cycle is a hard stop**, not a Ruling: the tasks are not independently deliverable and the
 plan needs re-cutting.
 
@@ -166,6 +173,14 @@ styles and controller serving it belong to one worker, and end-to-end browser te
 come last, after the features they exercise work. Where two ready tasks would own the same
 file, hold one back and record a Ruling — it is an ordering constraint the graph did not
 capture.
+
+**Resolve ownership against the codebase, not against the plan's claim about itself.** A plan
+asserting that two tasks "touch different files" was written before the code existed; the
+files decide. Two tasks that both render onto one template collide however independent the
+graph says they are, and the graph will not tell you — `Depends` describes what a task
+*consumes*, never what it *writes*. Step 1's audit is where you learn this, so carry its
+reading into the schedule: dispatching on the graph alone is how two workers end up editing
+one template concurrently and the second one's merge quietly wins.
 
 ## Run to completion — the session does not pause
 

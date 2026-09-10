@@ -139,16 +139,25 @@ covers the two things that are checkable offline and the rest is stated as a gap
 
    Then read the report for the schedule, which the script cannot score. It must name the
    **ready queue** and the **lane assignment**, with the graph as its evidence. The fixture
-   plan carries a deliberate diamond (T3 and T4 both depend on T2 and on nothing else) and a
-   deliberate lane-free task (T5, all `unit` cases). Three failures to watch for, each of
-   which scores clean:
-   - **T3 and T4 scheduled one after the other** — the graph was read as a chain, which is
+   plan carries a free pair (T3 and T5, disjoint files), a **file-collision trap** (T4 is free
+   in the graph the moment T2 lands, but owns T3's template), and a lane-free task (T5, all
+   `unit` cases). Four failures to watch for, each of which scores clean:
+   - **T3 and T5 scheduled one after the other** — the graph was read as a chain, which is
      the whole defect the per-task `Depends:` line replaced
-   - **T5 given a lane** — a unit-only task needs a worktree and a dependency install, not a
-     container
+   - **T3 and T4 dispatched together** — the graph says both are free; only reading the files
+     they own stops it. This is the check that the file-ownership contract is applied against
+     the codebase and not against the plan's own claim about itself
+   - **T4 held back with no Ruling recorded** — right move, no stated reason. The hold is an
+     ordering constraint the graph did not capture, and an unrecorded one is invisible to the
+     next reader
    - **any fan-out proposed with `workspace.lanes` unset (⇒ 1) and no `worktree_setup_cmds`** —
      that config runs everything in lane 0, and the report must say so rather than promising
      concurrency the project cannot host
+
+   Note that the fixture's `PLAN.md` is a checkbox stub with no `Interfaces`/`Files` blocks,
+   so the **derived** half of Step 3a has nothing to read. A run that says so and degrades to
+   declared-only is correct; a run that claims it derived and cross-checked edges it could not
+   have is a fail.
 3. **The per-task gate is the part that matters most and cannot be fixture-tested.** It is
    validated on the first real slice run: a task touching a global-effect artifact must be
    refused as done until the full-suite output is pasted. Record the result below.

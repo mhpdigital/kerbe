@@ -63,13 +63,22 @@ There is no per-plan "chain" or "group" label any more, and there must not be on
 word for a whole plan cannot say that tasks 2 and 3 are independent while 4→5→6 is a genuine
 chain, so it serialises the pair for nothing.
 
-Declare the dependency that is real, not the one that feels safe. `/kerbe:implement` also
-derives edges independently — from `Interfaces` (one task's `Consumes` naming another's
-`Produces`) and from `Files` (one task modifying what another creates) — and schedules on
-the **union** of declared and derived. A declared edge the derivation cannot see is
-legitimate when it is a real ordering constraint with no named seam (a migration that must
-land before a test touching the schema); say so in one line where it is not obvious.
-Over-declaring costs concurrency; under-declaring costs a race the union usually catches.
+**Declare every real dependency, including the ones the derivation would find anyway.**
+`/kerbe:implement` also derives edges independently — from `Interfaces` (one task's
+`Consumes` naming another's `Produces`) and from `Files` (one task modifying what another
+creates) — and schedules on the **union** of declared and derived. That derivation is a
+**cross-check, not a division of labour**: it is only worth running if both sides are
+independently complete, and a reader of the frozen plan should be able to see the graph
+without simulating the derivation in their head. So a task that consumes an earlier task's
+seam names it in `Depends` even though `Interfaces` already implies it.
+
+What `Depends` adds beyond the derivation is the edge no field can express — a real ordering
+constraint with no named seam and no shared file (a migration that must land before a test
+touching the schema). Say those in one line where they are not obvious, because they are the
+ones a reviewer cannot check against anything else.
+
+Declare what is real, not what feels safe: over-declaring costs concurrency, and
+under-declaring costs a race that the union usually, but not always, catches.
 
 ## Effort per task — decided here, not at dispatch
 
@@ -162,6 +171,15 @@ because each is a claim about something only a real request exercises:
 
 A fourth floor: a claim that is inherently client-side (a payment element mounting, a
 dropdown opening) needs a `browser` case and is not satisfiable at any lower level.
+
+**The floors are cumulative, not a classification.** One element routinely lands in two
+classes, and each class keeps its own case — a "share by email" control that opens a popup
+*and* posts to a route is a client-side claim (floor 4 ⇒ a `browser` case for the popup
+opening) *and* an action chain (floor 2 ⇒ an `http` case for the send reaching a route that
+acts on the card). Two promises, two cases. Picking the higher level and calling one case
+sufficient is the mistake: `browser` does not subsume `http`, because a browser case that
+drives the UI proves the popup opened, not that the route it posts to exists and is
+reachable by that audience.
 
 These floors are why pushing cases down to `unit` is safe. They are the cases that catch the
 defects nothing else catches, and they stay.
