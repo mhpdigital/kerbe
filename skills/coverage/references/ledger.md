@@ -45,12 +45,31 @@ Hard rules:
   plan-originated promise (`promised-by: plan:…`) therefore carries `spec: origin` —
   `GAP` is only for a hop the relay should have carried the promise across and didn't
   (`spec: GAP` = a *design-originated* promise no spec doc captures).
-- **A planned deliverable is ALWAYS a ledger row**, even when no spec/design clause backs
-  the plan task: the plan is approach documentation, and a planned thing that is unbuilt
-  or unwired is missing functionality. Write it as `promised-by: plan:<task>`,
-  `spec: origin`, and verify its code hop normally. The *doc mismatch itself* (plan
+- **A plan task promises its seams and its cited cases — nothing else.** A
+  `promised-by: plan:<task>` row (with `spec: origin`) is admissible only when it names
+  one of:
+  - a **seam**: an `Interfaces → Produces` entry (or, in a plan without Interfaces blocks,
+    the task's named deliverable) that has a consumer — a later task, a specified test, a
+    later slice, a route table, a schema, a payload someone parses, **or the user**. A
+    user-reachable deliverable is always a seam, the user being its consumer: a screen, a
+    page, a route, a command, an endpoint, a download. `T3 detail screen — route
+    /gallery/detail opened from a grid item tap` is a row even when no requirement names a
+    detail screen; that the plan invented the scope goes in the drop-file *as well*, never
+    instead of the row.
+  - a **case-table row** that cites a `REQ-` id or a design node.
+
+  Everything else in a task — its `Decisions` block, its Step 3 fragments, the pattern it
+  names, internal helpers, private methods, constructor wiring, memoisation, exception
+  classes caught inside the task — is **approach**, revisable by the worker and by review,
+  and is never a row. The test: could a reviewer change this without breaking another
+  task, a requirement, or something the user reaches? If yes, it is approach. The test: could a reviewer change this without breaking
+  another task or a requirement? If yes, it is approach. A planned seam that is unbuilt or
+  unwired is still missing functionality and still a row; the *doc mismatch itself* (plan
   invented scope, or the spec is behind) is the reverse-direction observation — note that
-  in the drop-file, never as a `spec: GAP`, and never by dropping the row.
+  in the drop-file, never as a `spec: GAP`. (Narrowed 2026-09-16: the earlier rule made
+  every plan line a promise, so a planner's own choices — a rate-limiter policy, an entry
+  point — froze with the authority of a human decision and review could not revisit them
+  without ledger surgery.)
 - `absent` vs `partial`: `absent` = nothing of the promise exists; `partial` = something
   exists but a link in its wiring chain is broken (stub, unregistered route, dead link,
   unimported stylesheet, undeclared asset). When nothing exists at all, the row is

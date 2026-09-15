@@ -42,6 +42,16 @@ routes, done-criteria (whatever the doc set carries; classify by content). The r
 highest-value findings are **spec deviations** — access level drift, ownership drift,
 scope drift — and a code-only pass cannot see them.
 
+**Authority order: `DECISIONS.md` and the requirement docs outrank `PLAN.md`.** The plan is
+frozen for the coverage denominator, not as a second spec. Code that departs from a task's
+`Decisions` block, Step 3 fragment or named pattern while honouring the recorded decisions
+and requirements is a **ruling** — record it under Design decisions, not as a flag. Plan
+drift is a finding only when it breaks a seam another task or slice consumes (the task's
+`Interfaces → Produces`) or a case-table claim that cites a requirement. Where the plan and
+a spec doc disagree, the spec doc wins and the disagreement is routed to `/kerbe:audit` —
+never resolved by reading the plan as the intended behaviour. (2026-09-16: reviews were
+treating planner-made choices as unchangeable because they were written down in the plan.)
+
 ## Step 2 — categorise every changed file
 
 Assign each file exactly one tier per the stack adapter's `risk-tiers.md`, applying its
@@ -90,6 +100,18 @@ written as `\|` inside the table cell, or the pipe splits the row and truncates 
 command.
 
 ```
+## QR-{n} — Code Review: {slice}
+
+**Branch:** {branch reviewed, e.g. slice/cards}
+**Date:** {YYYY-MM-DD}
+**Diff:** {base sha}..{tip sha} — {n} files ({--stat one-liner})
+**Reviewed at:** {tip sha}
+**Test evidence:** {the suite run and its summary line, or "none — <why>"}
+**Adversarial pass:** {ran / not run — what it changed}
+
+### Summary
+{Three to six sentences: what the diff does, the tier split, the headline finding.}
+
 ### Business-logic — read every line
 | File · concern (lines) | Why | Open |
 |---|---|---|

@@ -71,8 +71,15 @@ the source documents, so a stop-when-nothing-new loop is safe **here and only he
    {plugin}/adapters/design/{design_adapter}.md.
    Your frozen sources (read nothing else): {source file list}.
    Propose promise rows: one row per LEAF-LEVEL promise a user could recognize —
-   every interactive design leaf, every requirement clause, every plan-task
-   deliverable. A page or section is never one row; its leaves are the rows.
+   every interactive design leaf, every requirement clause, and from the plan ONLY
+   its seams — each Interfaces → Produces entry (or, in a checklist plan, each task's
+   named deliverable) that another task, a specified test, a later slice, a route
+   table, a schema, or THE USER consumes: a screen, page, route, command, endpoint or
+   download a user reaches is always a seam and always a row, even when no requirement
+   names it — and each case-table row that cites a requirement or design node. A
+   task's Decisions block, Step 3 fragments, named patterns, internal helpers and
+   private methods are approach, never promises (ledger.md, plan rows). A page or
+   section is never one row; its leaves are the rows.
    Return ONLY a markdown table: | promise | promised-by |. Real citations only.
    Do not verify anything, do not read application code, do not invent promises.
    ```
