@@ -74,8 +74,18 @@ seam names it in `Depends` even though `Interfaces` already implies it.
 
 What `Depends` adds beyond the derivation is the edge no field can express — a real ordering
 constraint with no named seam and no shared file (a migration that must land before a test
-touching the schema). Say those in one line where they are not obvious, because they are the
-ones a reviewer cannot check against anything else.
+touching the schema). Say those where they are not obvious, because they are the ones a
+reviewer cannot check against anything else. Put the justification in a line **beneath** the
+field, never on it: `**Depends:**` carries the value and nothing else, and a trailing comment
+on that line is a structural failure.
+
+**Two tasks that both modify a file neither creates are not a dependency.** This is the
+common case — two tasks adding to one existing template — and it has no direction, so it is
+not a `Depends` edge and inventing one is over-serialisation. It is a **mutual exclusion**:
+they may not run at the same time. `/kerbe:implement` resolves that with the file-ownership
+contract, holding one back and recording a Ruling. Your job is to make it visible: name the
+exact file in both tasks' `Files: Modify` so the collision is derivable from the plan rather
+than discovered by a worker's merge.
 
 Declare what is real, not what feels safe: over-declaring costs concurrency, and
 under-declaring costs a race that the union usually, but not always, catches.
@@ -109,6 +119,12 @@ A name belongs in **Interfaces → Produces** when, and only when, it is one of:
 - consumed by another task in this plan
 - asserted by a test the plan specifies
 - read by a later slice, a route table, a schema, or a payload someone else parses
+
+**Each Produces entry names its consumer** — `→ Task 7`, `→ case 4`, `→ <later slice>`,
+`→ route table`. An entry with no consumer to name is internal by definition and comes out.
+This is also what `/kerbe:coverage` reads: only a Produces entry with a consumer, and a case
+citing a requirement, become ledger rows; the rest of the task is approach the worker and
+the review may revise.
 
 Everything else stays out: internal helpers, private methods, an exception class caught
 inside the same task, local data shapes, constructor wiring. Listing them costs the plan its
@@ -169,8 +185,14 @@ because each is a claim about something only a real request exercises:
    a state, the transition's precondition is shown producible *through the interface*. That a
    method with the right name exists is not the promise.
 
-A fourth floor: a claim that is inherently client-side (a payment element mounting, a
-dropdown opening) needs a `browser` case and is not satisfiable at any lower level.
+A fourth floor: a claim that is inherently client-side needs a `browser` case and is not
+satisfiable at any lower level. The obvious members are behavioural — a payment element
+mounting, a dropdown opening — but **a styling claim belongs here too**, and it is the one
+that gets missed. "The card lifts on hover" is not discharged by an `http` case asserting
+`.card-hover` appears in the markup: the class name is present whether or not the stylesheet
+defining it is ever imported into the bundle, so that case passes with the rule dead. If the
+promise is that the user *sees* something, the case has to observe the computed result, not
+the hook it hangs on.
 
 **The floors are cumulative, not a classification.** One element routinely lands in two
 classes, and each class keeps its own case — a "share by email" control that opens a popup
@@ -221,16 +243,22 @@ Counts are welcome as evidence *after* a run, in the tracker. They are not a gat
 
 **Requirements:** `REQ-...` ids this task satisfies (the spec's testable clauses)
 **Design:** `node=<id> measured=<YYYY-MM-DD>` — required for every UI-bearing task
-**Decisions:** the rulings this task must not re-litigate, each with its answer. Empty is the
-normal state at `low` and `standard`; at `deep`, an open item names what the worker is to
-settle and report — and it must be answerable **from the codebase**, by someone reading it.
-Say what is already settled alongside it, so the open ground is bounded.
+**Decisions:** the rulings this task must not re-litigate, **each citing where it was
+decided** — a `DECISIONS.md` id, a `REQ-` id, or a dated spec-doc clause. The planner does
+not mint decisions: a choice that no doc records and that a human could reasonably make
+differently (a policy, a limit, a boundary, a format) is a spec gap — send it back to the
+specification step (a grilling round, or `/kerbe:start`) and freeze with the answer in
+hand, or write it as `worker's call` and let the worker choose. Empty is the normal state
+at `low` and `standard`; at `deep`, an open item names what the worker is to settle and
+report — and it must be answerable **from the codebase**, by someone reading it. Say what
+is already settled alongside it, so the open ground is bounded.
 
 - [ ] **Step 1: Write the failing test** — the case table, `Level` column first (the test
       code itself at `low`, or where the harness is the requirement)
 - [ ] **Step 2: Run it, confirm it fails** — the command, and the shape of the failure
 - [ ] **Step 3: Minimal implementation** — the code at `low`; at `standard` and `deep`, the
-      deciding fragments and the existing pattern to follow
+      existing pattern to follow (a file path) and, only where the seam rule's test says two
+      competent workers would diverge, the two or three deciding lines — never a fenced block
 - [ ] **Step 4: Run it, confirm it passes** — the command, and the observable shape
 - [ ] **Step 5: Full suite** — only when this task touches a global-effect artifact; paste
       the summary line as the evidence
@@ -285,7 +313,13 @@ Run this yourself — it is a checklist, not a dispatch:
    this way, which is the second reason internal names stay out of Interfaces.
 5. **Effort and code boundary** — every task carries an effort level; every `low` task
    carries its code in full; no `standard` or `deep` task carries a body that its cases and
-   its named pattern already determine.
+   its named pattern already determine. Mechanically: a fenced code block inside a
+   `standard` or `deep` task fails the freeze; a `Produces` entry without a named consumer
+   fails the freeze.
+5a. **Decision provenance** — every line in every `Decisions` block cites a `DECISIONS.md`
+   id, a `REQ-` id or a dated spec clause, or reads `worker's call`. A ruling with no
+   citation is one the planner made up; it goes back to the specification step before
+   the freeze, because once frozen it will be read as if a human had decided it.
 6. **Open decisions** — every `Decisions` block at `low` or `standard` is answered. A
    question left for the worker at those levels is an unanswered planning question wearing a
    task's clothes, and unattended runs cannot answer it. Settle it, or raise the task to

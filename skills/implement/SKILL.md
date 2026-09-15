@@ -81,10 +81,25 @@ This step is mechanical. Never raise branch topology as a question.
 
 ## Step 1 — the audit that precedes the tracker
 
-Before writing any tracker, establish what already exists: run `/kerbe:audit` if the slice
-has prior work, otherwise read the workspace for the plan's artifacts. The result is a
+Before writing any tracker, establish what already exists. The result is a
 DONE / PARTIAL / MISSING position per plan task. A tracker written without this restarts
 finished work and reports it as progress.
+
+`/kerbe:audit` is the intended tool and **is not built yet** (`ROADMAP.md` plans it). Until it
+exists, read the workspace for the plan's artifacts yourself — this is the normal path, not a
+degraded one, so do not report it as a blocker. If the skill is present by the time you read
+this, use it.
+
+**The audit outranks the plan's checkboxes.** A `[x]` in the plan is what someone believed
+when they wrote it; the audit is what the workspace contains now. Where they disagree, the
+audit wins and the disagreement is a Ruling. Keep the two questions separate, because they
+have different answers and different consequences:
+
+- **buildable** — is the deliverable present enough for a dependent task to build on? This
+  feeds the dependency graph, and a partially-built task can unblock its dependents.
+- **done** — does the tracker's evidence rule hold (a commit, and for a global-effect task
+  the pasted full-suite result)? A task whose only test is a stub with no assertions is
+  `in progress`, whatever the plan's checkbox says.
 
 ## Step 2 — derive the progress tracker
 
@@ -124,6 +139,14 @@ Take the **union** of two sources, and never just one:
 - **derived** — task B depends on A when B's `Interfaces: Consumes` names anything in A's
   `Interfaces: Produces`, or B's `Files: Modify` names anything in A's `Files: Create`
 
+**A shared `Modify` is not an edge.** Two tasks that both modify a file neither creates have
+no direction between them, so they produce no dependency and belong in no graph — but they
+**cannot run at the same time**. Collect those pairs here as mutual exclusions and hand them
+to the file-ownership contract in 3c; do not manufacture a `Depends` edge to express one,
+because that serialises the whole subtree behind an ordering you invented. This is the most
+common collision there is — two tasks adding to one existing template — and it is exactly
+the case the create→modify rule above does *not* catch.
+
 The union is the safe direction: a missing edge causes a race, a spurious edge only costs
 serialisation. Where the two disagree, record a **Ruling** naming the task and the edge and
 carry on — it is a plan defect worth reading. A derived-but-not-declared edge means the
@@ -156,6 +179,13 @@ tests against it. Lane 0 is the workspace from Step 0. Resolve `workspace.lanes`
 A task is **lane-free** when every case in its table is `unit`; it needs a worktree and
 `worktree_setup_cmds`, nothing more. Any other task is **lane-bound**.
 
+**The `worktree_setup_cmds` override outranks the lane-free classification.** Lane-free says
+what a task *would* need; the override says what this project can *give* it. With no
+`worktree_setup_cmds` there is no usable worktree to place a lane-free task in, so it runs in
+lane 0 with everything else. Say both halves in the report — "T5 is lane-free by case level,
+and runs in lane 0 anyway because the project declares no worktree setup" — because a reader
+who sees only the second half cannot tell whether the plan or the config is the constraint.
+
 ### 3c — dispatch from a ready queue, never in waves
 
 A wave — compute everything ready, run it all, barrier, repeat — makes every task wait for
@@ -173,6 +203,13 @@ styles and controller serving it belong to one worker, and end-to-end browser te
 come last, after the features they exercise work. Where two ready tasks would own the same
 file, hold one back and record a Ruling — it is an ordering constraint the graph did not
 capture.
+
+**Which one to hold: run the task with more of its deliverable missing, hold the one already
+partly built.** Step 1's audit says which is which. The one that is mostly absent defines the
+file's shape, and the task that only adds to it merges more cleanly onto a finished file than
+the reverse. Where the audit cannot separate them, hold the later task number and say that is
+why — an arbitrary tiebreaker stated out loud is better than an unstated one, because the next
+reader can see it was arbitrary.
 
 **Resolve ownership against the codebase, not against the plan's claim about itself.** A plan
 asserting that two tasks "touch different files" was written before the code existed; the
