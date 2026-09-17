@@ -20,6 +20,10 @@ branch still missing promised functionality spends the reviewer on what is there
 of what is not — run `/kerbe:coverage` first. Review findings are code defects, not
 missing promises: they route to `/kerbe:bug`, never into the coverage ledger.
 
+The QR this skill records is a queue of decisions a human still has to make. `/kerbe:rwalk`
+is what works that queue — one row per turn, struck in place as each resolves — which is
+why every row must carry its own id and its own open command.
+
 ## Setup
 
 1. Read `kerbe.yml` (hard stop if missing). Resolve `planning_root`, the stack adapter
@@ -83,9 +87,15 @@ Output shape (full format below): `## QR-{n} — Code Review: {slice}` with meta
 last. Method notes, deliberate product changes, and test status fold into Summary or
 Flags — no trailing sections.
 
-**ATOMIC-ITEM rule:** one review item = one table row, and the row carries its own open
-command in an **Open** column — never a separate command block. Each row stands alone —
-read, open, review, tick, next. The Open cell is `editor_cmd` with `{line}`
+**ATOMIC-ITEM rule:** one review item = one table row; the row carries its own stable id
+in a leftmost **ID** column and its own open command in an **Open** column — never a
+separate command block. Each row stands alone — read, open, review, tick, next. Ids are
+`B1…Bn` business-logic, `G1…Gn` glue, `F1…Fn` flags (boilerplate is never walked row by
+row, so it carries none). They are what `/kerbe:rwalk` resumes on, what a resolution is
+cited by, and what a raised bug points back to; a line number cannot serve, because
+resolution prose lands in the row and shifts every line below it. Never reuse or renumber
+an id — a struck row keeps its own, a new row takes the next free number. The Open cell
+is `editor_cmd` with `{line}`
 and the **absolute** `{file}` substituted; with no `editor_cmd` configured, a plain
 `file:line` reference (clickable in most terminals) — and say the config key exists.
 
@@ -113,20 +123,21 @@ command.
 {Three to six sentences: what the diff does, the tier split, the headline finding.}
 
 ### Business-logic — read every line
-| File · concern (lines) | Why | Open |
-|---|---|---|
-| `src/.../File.ext` · `method()` (L12–40) | {why this needs human eyes} | {editor_cmd or file:line} |
+| ID | File · concern (lines) | Why | Open |
+|---|---|---|---|
+| B1 | `src/.../File.ext` · `method()` (L12–40) | {why this needs human eyes} | {editor_cmd or file:line} |
 
 ### Glue — read the flow, skip the syntax
-| File | What to check | Open |
-|---|---|---|
+| ID | File | What to check | Open |
+|---|---|---|---|
 
 ### Boilerplate — don't read, trust the full suite
 | File | What it does |
 |---|---|
 
 ### Flags
-{Deviations from the spec docs, missing coverage, security observations — ranked by
+{Each flag opens with its id and severity — **F1 — Medium: …** — so the walk can address
+it. Deviations from the spec docs, missing coverage, security observations — ranked by
 severity, each with a concrete failing scenario. Include a "Verified safe" line for
 consequential things checked and cleared, each citing the mechanism that makes it safe.
 If none: "None."}

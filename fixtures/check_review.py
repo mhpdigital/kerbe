@@ -15,6 +15,18 @@ import sys
 QR_RE = re.compile(r"^## (QR-\d+) — Code Review: \S+", re.M)
 SECTION_ORDER = ("### Summary", "### Business-logic", "### Glue",
                  "### Boilerplate", "### Flags")
+ID_RE = re.compile(r"^(?:QR-\d+/)?[BGF]\d+$")
+
+
+def data_rows(section):
+    """Table rows carrying content — header, separator and prose lines dropped."""
+    return [r for r in section.splitlines()
+            if r.strip().startswith("|") and "`" in r and "---" not in r
+            and cells(r)[0] not in ("ID", "File")]
+
+
+def cells(row):
+    return [c.strip() for c in row.strip().strip("|").split("|")]
 
 
 def main(argv):
@@ -52,17 +64,27 @@ def main(argv):
         for field in ("Branch", "Date", "Diff"):
             check(qid + " metadata carries " + field,
                   bool(re.search(r"\*\*" + field + r":\*\*\s*\S", body)))
-        biz = body[body.find("### Business-logic"):body.find("### Glue")] \
-            if "### Business-logic" in body and "### Glue" in body else ""
-        rows = [r for r in biz.splitlines()
-                if r.strip().startswith("|") and "`" in r and "---" not in r
-                and not r.strip().startswith("| File")]
-        for r in rows:
+        have = "### Business-logic" in body and "### Glue" in body \
+            and "### Boilerplate" in body
+        biz = body[body.find("### Business-logic"):body.find("### Glue")] if have else ""
+        glue = body[body.find("### Glue"):body.find("### Boilerplate")] if have else ""
+        for r in data_rows(biz):
             check(qid + " tier-1 row has line reference: " + r.strip()[:44],
                   bool(re.search(r"L\d+|:\d+", r)), "no L<n> or :<line>")
             check(qid + " tier-1 row has an Open cell: " + r.strip()[:44],
-                  len([c for c in r.strip().strip("|").split("|") if c.strip()]) >= 3,
-                  "row must carry its own Open column (ATOMIC-ITEM)")
+                  len([c for c in cells(r) if c]) >= 4,
+                  "row must carry its own ID and Open columns (ATOMIC-ITEM)")
+        # Every walkable row is addressable: leftmost cell is a stable id (ATOMIC-ITEM).
+        ids = []
+        for tier, section in (("B", biz), ("G", glue)):
+            for r in data_rows(section):
+                first = cells(r)[0].strip("~* ")
+                check(qid + " tier row carries an id: " + r.strip()[:44],
+                      bool(ID_RE.match(first)) and first.lstrip("QR-0123456789/")[0] == tier,
+                      "leftmost cell must be %s<n>, got %r" % (tier, first))
+                ids.append(first)
+        check(qid + " ids are unique", len(ids) == len(set(ids)),
+              "reused id: " + str([i for i in ids if ids.count(i) > 1]))
 
     for f in changed:
         check("changed file categorised: " + f, f in text,

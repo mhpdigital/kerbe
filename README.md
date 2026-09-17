@@ -79,6 +79,19 @@ recorded as a sequential QR in the slice's `REVIEW.md` (plus a human `REVIEW_GUI
 the first review). Classification rules live per stack in `adapters/stack/*/risk-tiers.md`;
 findings route to `kerbe:bug`, never into the coverage ledger.
 
+### `kerbe:rwalk`
+
+Works the queue `kerbe:review` records. A QR is a list of decisions a human still has to
+make, and making them by hand — find the next open row, copy its open command, read the
+code cold, type the strikethrough — costs more attention than the decisions do. `rwalk`
+runs it one row per turn: pre-reads the cited lines so the turn is a confirm-or-challenge
+rather than a cold read, opens the row in the editor, then strikes it in place with the
+mechanism behind the verdict. Tier 2 goes five to a turn and tier 3 closes in one, because
+the tiering already decided where the attention belongs. State lives in the rows — a row
+is open until it carries an unstruck bold status — so resume is derivable and there is no
+ledger file to keep in sync. `ok` / `bug` / `defer` / `skip` / `back` / `stop`; anything
+else is discussion. The walk never edits application code.
+
 ### Executors
 
 Skill bodies name worker **intent** only; the dispatch mechanism lives in
@@ -95,7 +108,8 @@ aspect ratio.
 
 ## Repository layout
 
-- `skills/` — the plugin skills (`coverage`, `start`, `figma`, `plan`, `implement`, `bug`, `review`)
+- `skills/` — the plugin skills (`coverage`, `start`, `figma`, `plan`, `implement`, `bug`,
+  `review`, `rwalk`)
 - `adapters/` — design adapters (`figma`, `claude-design` — git-committed `*.dc.html`
   artboards, node id = element `id`, no API — and `none`), stack adapters (`symfony`, `flutter`:
   `verify.md` / `commands.md` / `impact.md` / `risk-tiers.md`), executor adapters (`claude`, `inline`)

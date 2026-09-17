@@ -216,10 +216,33 @@ Any change to `skills/review/` or the `risk-tiers.md` adapters reruns before rea
    structurally checked; it is validated on the first real slice review and recorded
    below. Stated, not hidden.
 
+## kerbe:rwalk gate
+
+Any change to `skills/rwalk/` reruns before real use:
+
+1. `python3 -m unittest tests.test_check_review` — the ID column the walk resumes on is
+   part of the QR's recorded structure, so the checker owns it: every business-logic and
+   glue row carries a `B<n>`/`G<n>` id, ids are unique, and a row struck by a walk still
+   passes (the id cell stays unstruck and addressable).
+2. **Turn-discipline run**, on a real REVIEW.md with open rows. The walk must:
+   resolve and announce its position before the first turn; present **one** item and stop;
+   never mark a row the human did not answer on; write the row's edit at the moment it
+   resolves, not at the end; and leave application code untouched. Any of these failing is
+   a gate failure — they are the whole skill. Stop the run after three items and inspect
+   the file: three rows struck in place with an unstruck bold status and a mechanism
+   sentence, every other row byte-identical.
+3. **Resume**, immediately after: a second invocation with no arguments must land on the
+   fourth row without being told where it was. Resume is derived from the rows themselves,
+   so a run that needs a pointer file has already failed this.
+4. The judgment half — whether a pre-verdict is worth reading, whether a verdict's
+   mechanism sentence would survive the reviewer forgetting — is validated on the first
+   real walk and recorded below. Stated, not hidden.
+
 ## Recorded runs
 
 | Date | Fixture | Model | Result |
 |---|---|---|---|
+| 2026-09-17 | rwalk gate (new skill) + review gate, deterministic half | opus | **PARTIAL — deterministic half PASS, both behavioural halves outstanding and stated.** 88 unit tests green, `test_check_review` extended from 7 to 11 cases for the ID column the walk resumes on (missing id per tier, reused id, and a walked row still passing with its id cell unstruck). The `skills/review/` change is confined to Step 4's output shape (ID column, F-ids on flags) and the `rwalk` handoff sentence — no classification or tiering rule moved — but the review gate's **fixture run (step 2) has not been rerun**, and the rwalk gate's **turn-discipline and resume runs (steps 2–3) have not been run at all**: both need a live walk against a real REVIEW.md, which is the first real use. Recorded as outstanding rather than assumed: the structural checker cannot see whether the skill stops after one item, and that is the whole skill. |
 | 2026-09-10 | plan + implement gates: symfony-mini scratch × 5 (stop, authoring ×2, schedule ×2) | sonnet | **PASS on the second pass — the lanes / dependency-graph / case-level change (0.6.x).** Stop run passed first time (halted on the missing `SETTINGS.md`, refused to infer `design_required` from the populated `UI_ELEMENTS.md` beside it). The other two failed first and found **four defects, three of them in the change itself**: (1) the fixture's advertised diamond was fictional — T3/T4 both render onto `detail.html.twig`, so the gate text would have **failed a correct schedule** that held T4 back; (2) file ownership was resolved from the plan's claim about itself rather than the codebase — now bound to the codebase, since `Depends` says what a task *consumes*, never what it *writes*; (3) `UI_ELEMENTS.md` carried node ids but no `measured=` dates, blocking the design gate — **pre-existing**, and since the 2026-09-09 row above records this same gate passing, whether it stops has depended on how strictly the agent read the requirement; (4) two ambiguities raised unprompted — whether a seam dependency is *also* declared in `Depends` (yes: derivation is a cross-check, not a division of labour) and how to handle one element in two acceptance-floor classes (cumulative: `browser` does not subsume `http`). Second pass: authoring run wrote a 188-line, 4-task plan, `check_plan.py` ALL PASS, **zero code fences at `standard` effort**, levels 3 `unit` / 10 `http` / 3 `browser`, floor applied correctly (share popup carries both a `browser` and an `http` case). Schedule run degraded to declared-only and said so, caught the T3/T4 collision, held T4 with a Ruling, and reported lane 0 serial execution rather than promising concurrency the fixture's config cannot host. Four further wording gaps the runs had to paper over, all now bound: a hold-back with no stated tiebreaker; `worktree_setup_cmds`-unset vs the lane-free classification having no stated precedence; `/kerbe:audit` referenced by `implement` Step 1 but **not built** (`ROADMAP.md:51` plans it) with no stated fallback, and no rule for the audit disagreeing with the plan's `[x]` marks; and — the sharpest — the derived-edge rule reading literally as create→modify only, so **two tasks both modifying a pre-existing file fall through it entirely**, which is the single most common collision and precisely the T3/T4 case. Now stated as a mutual exclusion, not a graph edge. Still unfixed and out of scope: `executor.adapter` is required-for-implement but nothing checks it before Step 4; multi-entry `code_roots` with no `{slice}` has no stated resolution rule. |
 | 2026-08-20 | symfony-mini | sonnet | PASS — 9/9 checks on both runs; gap portion identical (6 open: download row, filter chips, share popup, dead export link, unimported hover, receipt stub); promise total varied 10 vs 8 (present-row granularity, see criterion above) |
 | 2026-08-20 | flutter-mini | sonnet | PASS after harness fix — first run exposed two plants authored `absent` while EXPECTED said `partial` (fixture corrected: unrouted detail screen, undeclared Image.asset; `origin` semantics tightened in ledger.md); two post-fix runs 4/4 checks, verdict blocks byte-identical |

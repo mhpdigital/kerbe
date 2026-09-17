@@ -30,17 +30,17 @@ Card index + detail pages. Low risk overall; adversarial pass ran. Full suite gr
 
 ### Business-logic — read every line
 
-| File · concern (lines) | Why | Open |
-|------|-----|------|
-| `src/Controller/CardController.php` · `detail()` (L20–41) | ownership check decides who sees a card | `phpstorm --line 20 /abs/src/Controller/CardController.php` |
+| ID | File · concern (lines) | Why | Open |
+|----|------|-----|------|
+| B1 | `src/Controller/CardController.php` · `detail()` (L20–41) | ownership check decides who sees a card | `phpstorm --line 20 /abs/src/Controller/CardController.php` |
 
 ---
 
 ### Glue — read the flow, skip the syntax
 
-| File | What to check | Open |
-|------|---------------|------|
-| `src/Controller/CardController.php` | index route renders the right template | `phpstorm --line 12 /abs/src/Controller/CardController.php` |
+| ID | File | What to check | Open |
+|----|------|---------------|------|
+| G1 | `src/Controller/CardController.php` | index route renders the right template | `phpstorm --line 12 /abs/src/Controller/CardController.php` |
 
 ---
 
@@ -99,6 +99,37 @@ class CheckReviewTest(unittest.TestCase):
         code, out = run(GOOD.replace("QR-1", "QR-3"))
         self.assertEqual(code, 1)
         self.assertIn("sequential", out)
+
+    def test_tier1_row_without_id_fails(self):
+        bad = GOOD.replace("| B1 | `src/Controller/CardController.php` · `detail()`",
+                           "| `src/Controller/CardController.php` · `detail()`")
+        code, out = run(bad)
+        self.assertEqual(code, 1)
+        self.assertIn("must be B<n>", out)
+
+    def test_glue_row_without_id_fails(self):
+        bad = GOOD.replace("| G1 | `src/Controller/CardController.php` | index route",
+                           "| `src/Controller/CardController.php` | index route")
+        code, out = run(bad)
+        self.assertEqual(code, 1)
+        self.assertIn("must be G<n>", out)
+
+    def test_reused_id_fails(self):
+        bad = GOOD.replace("| G1 |", "| B1 |")
+        code, out = run(bad)
+        self.assertEqual(code, 1)
+        self.assertIn("reused id", out)
+
+    def test_resolved_row_keeps_its_id_and_passes(self):
+        """A walked row is struck in place; the id cell stays unstruck and addressable."""
+        walked = GOOD.replace(
+            "| B1 | `src/Controller/CardController.php` · `detail()` (L20–41) | ownership check decides who sees a card |",
+            "| B1 | ~~`src/Controller/CardController.php` · `detail()` (L20–41)~~ "
+            "**RESOLVED (VERIFIED) 2026-09-17** | ~~ownership check decides who sees a card~~ "
+            "Confirmed: `detail()` resolves through the scoped builder, never a row id |")
+        code, out = run(walked)
+        self.assertEqual(code, 0, out)
+        self.assertIn("ALL PASS", out)
 
     def test_check_prefix_forbidden(self):
         code, out = run(GOOD.replace("None.", "✅ all clear"))
