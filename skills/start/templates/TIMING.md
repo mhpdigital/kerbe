@@ -9,7 +9,7 @@
 |------|-------|----------------|-------|
 | 1. Start | `/kerbe:start` | {YYYY-MM-DD HH:MM} | |
 | 2. Design | `/kerbe:figma` | — | |
-| 3. Specify | manual | — | |
+| 3. Specify | `/kerbe:grill` | — | |
 | 4. Scaffold | `/kerbe:scaffold` | — | |
 | 5. Plan impl. | `/kerbe:plan` | — | |
 | 6. Implement | `/kerbe:implement` | — | |

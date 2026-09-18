@@ -238,6 +238,35 @@ Any change to `skills/rwalk/` reruns before real use:
    mechanism sentence would survive the reviewer forgetting — is validated on the first
    real walk and recorded below. Stated, not hidden.
 
+## kerbe:grill gate
+
+Any change to `skills/grill/` reruns before real use:
+
+1. **Brief assembly, inspected before any round runs.** Invoke on a fixture slice and stop at
+   the assembled brief. All seven parts present and in order; every document referenced by
+   **path**, with zero document contents pasted; each of the slice's own docs annotated with
+   its authority; parent material scoped to an ID range rather than a whole file; the
+   fact/decision split stated. A brief that names a file the slice does not have, or omits one
+   it does, is a gate failure — the brief is the skill.
+2. **Fact/decision discipline**, over one real round. Every question put to the user must be
+   one no amount of reading could answer. Take the round's questions and try to answer each
+   from the planning docs and the code root alone: any that yields to a `grep` should have
+   been dispatched to a sub-agent, not asked.
+3. **Deferred recording.** Mid-campaign, `DECISIONS.md` must not exist or must be unchanged;
+   only `GRILLING_STATE.md` moves. A skill that writes decisions as they are made produces a
+   file that contradicts itself once a later round reshapes an earlier answer.
+4. **Resume across the context wall.** Kill the session mid-campaign and re-invoke. It must
+   rebuild the frontier from `GRILLING_STATE.md` and continue at the right round without being
+   told where it was — this is the failure that ended the one real campaign twice, so it is
+   not optional.
+5. **Recording shape**, on completion: provenance header with the date; sections by topic
+   citing question ids; every bullet carrying the ruling **and** its reasoning; known limits
+   marked; propagation notes naming their target doc — and each of those followed into that
+   doc. `GRILLING_STATE.md` deleted, `TIMING.md` row 3 stamped.
+6. The judgment half — whether the rounds reached the altitude that matters, whether a
+   decision record still reads as a decision in three weeks — is validated on the first real
+   campaign and recorded below. Stated, not hidden.
+
 ## Recorded runs
 
 | Date | Fixture | Model | Result |

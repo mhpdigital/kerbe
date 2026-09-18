@@ -37,6 +37,15 @@ Open a slice (tailored doc set from lifecycle + stack templates, `design_require
 by asking, never inferring) and run its design leg (grade, extract at leaf level, compare
 against the spec, fill the Design-sources block `kerbe:plan` blocks on).
 
+### `kerbe:grill`
+
+The Specify step, between the design leg and the freeze. Wraps the grilling skill: assembles
+the brief that points it at the slice's own docs with their authority annotated, the parent
+entries that bind this slice, and the dependency state — paths, never pasted contents — then
+runs the rounds and lands the result in `DECISIONS.md`, each ruling cited back to the question
+that settled it. Exists because `kerbe:plan` demands a spec whose open questions are resolved,
+and a plan frozen over a silent assumption churns after it has been handed to workers.
+
 ### `kerbe:plan`
 
 Freezes the slice's task list as `PLAN.md` — the HOW, with code, one task per independently
