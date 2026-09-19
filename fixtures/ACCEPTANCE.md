@@ -263,8 +263,19 @@ Any change to `skills/grill/` reruns before real use:
    citing question ids; every bullet carrying the ruling **and** its reasoning; known limits
    marked; propagation notes naming their target doc — and each of those followed into that
    doc. `GRILLING_STATE.md` deleted, `TIMING.md` row 3 stamped.
-6. The judgment half — whether the rounds reached the altitude that matters, whether a
-   decision record still reads as a decision in three weeks — is validated on the first real
+6. **Post-freeze amendment**, on a fixture slice that already carries a `PLAN.md`: run a
+   campaign whose decisions include one that adds a deliverable and one that supersedes an
+   existing task. The run must append a **dated amendment section to that same `PLAN.md`**,
+   cite the question ids, add the new work as tasks numbered on from the last with `Files`,
+   `Effort`, `Interfaces`, `Depends` and a case table with levels, and name the superseded
+   task **without editing its body** — diff the pre-run file and every frozen task must be
+   byte-identical. `python3 fixtures/check_plan.py <the amended PLAN.md>` must print
+   `ALL PASS`. Writing a `FIX_PLAN.md`, a second plan file, or leaving the plan untouched is
+   a gate failure: routing decisions away from the plan they change is the failure this step
+   exists to catch.
+7. The judgment half — whether the rounds reached the altitude that matters, whether a
+   decision record still reads as a decision in three weeks, whether an amendment reads as
+   an instruction to a worker who never saw the rounds — is validated on the first real
    campaign and recorded below. Stated, not hidden.
 
 ## Recorded runs

@@ -29,7 +29,10 @@ denominator.
 4. **Mode — computed from the slice, never a flag and never a question:**
    - **no `PLAN.md` in the slice folder ⇒ build mode.** Steps 1–6 below.
    - **`PLAN.md` exists ⇒ remediation mode.** A frozen plan is not rewritten, so the only
-     legal output is `FIX_PLAN.md`. See the mode section at the end.
+     legal output is `FIX_PLAN.md`. See the mode section at the end. Remediation is for
+     **ledger rows**: a decision out of `/kerbe:grill` has no ledger id and never arrives
+     here — that skill appends it to the same `PLAN.md` as a dated amendment section
+     (its Step 6), per the amendment rule in Rules below.
    - The user overrides both by saying so ("re-plan from scratch, the scope changed") — and
      then say what it costs before writing: a replaced `PLAN.md` invalidates the ledger's
      plan hop and needs a fresh coverage extraction to mean anything again.
@@ -227,7 +230,10 @@ Then, four changes to the authoring rules:
 ## Rules
 
 - A frozen plan is amended by **writing a dated amendment section at its end**, never by
-  editing a task a worker may already have read.
+  editing a task a worker may already have read. New work in an amendment is a new task,
+  numbered on from the last and authored to `references/plan-spec.md` like any other;
+  superseded work is named in the amendment, not edited out. `/kerbe:grill` Step 6 is the
+  one that writes them.
 - Every task carries an effort level, and the level sets the code boundary: full code at
   `low`, seams and cases at `standard` and `deep`.
 - Every task carries `**Depends:**`, and every case carries a `Level`. There is no per-plan

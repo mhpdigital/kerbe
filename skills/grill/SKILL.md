@@ -3,7 +3,8 @@ name: grill
 description: >-
   Use when a slice's spec docs are drafted but the decisions behind them are not settled —
   runs the grilling rounds that turn silent assumptions into recorded decisions, then writes
-  them into DECISIONS.md. This is kerbe's Specify step, between figma and plan.
+  them into DECISIONS.md, the spec docs, and — when the slice already has one — the same
+  PLAN.md as a dated amendment. This is kerbe's Specify step, between figma and plan.
 disable-model-invocation: true
 ---
 
@@ -27,6 +28,11 @@ result somewhere durable. Everything project-specific resolves through `kerbe.ym
 Lifecycle step **3, Specify** — after `/kerbe:figma`, before `/kerbe:plan`. The docs exist
 from `/kerbe:start`; this is where the decisions inside them stop being assumptions.
 
+Run **after** a plan is frozen it is the same step with one more destination: the decisions
+still go to `DECISIONS.md` and the spec docs, and Step 6 carries the ones that change work
+into the slice's own `PLAN.md` as a dated amendment. Grilling never leaves a plan describing
+a spec the slice has since ruled against.
+
 **This skill establishes that placement; it does not inherit it.** Step 3 has been `manual`
 in the TIMING template since the template was written, and no slice has ever stamped it. The
 evidence behind putting grilling there is one campaign — `ddx-freeform-input`, 2026-09-16,
@@ -44,12 +50,21 @@ read it. Resolve the slice from the argument, else the branch
 stop if `{planning_root}/{slice}/` does not exist — say to run `/kerbe:start` first. Honour
 `kerbe.constraints` and `kerbe.constraints_by_skill.grill`.
 
-**If `PLAN.md` already exists, say what grilling now costs before starting.** A frozen plan is
-not rewritten: any decision that changes it can only reach `FIX_PLAN.md` through
-`/kerbe:plan`'s remediation mode, and a decision that changes the *spec* under a frozen plan
-invalidates the coverage ledger's plan hop. Grilling before the freeze costs one session;
-grilling after it costs a remediation round and a re-extraction. Do not refuse — state the
-cost, then proceed if the user still wants it.
+**If `PLAN.md` already exists, grilling still lands in that plan.** Frozen means a task body
+is never rewritten; it does not mean the plan is closed. `/kerbe:plan`'s own rule is that a
+frozen plan is amended by **a dated amendment section at its end**, and that is where a
+post-freeze decision goes — Step 6 writes it, into the same `PLAN.md`, in the same session.
+`FIX_PLAN.md` is not the route: that is coverage's remediation file, and its tasks cite
+**ledger ids**, which a grilling decision does not have. A decision cites a `DECISIONS.md`
+question id and belongs in the plan it changes.
+
+Say the two real costs before starting, then proceed:
+
+- code already built against a task the amendment supersedes is not unbuilt by the amendment
+  — each of those is its own decision, and Step 6 names them rather than assuming either way
+- if `PROMISES.md` exists, the spec edits and the amendment move the ledger's denominator, so
+  the slice needs a fresh `/kerbe:coverage` extraction; the diff against the old ledger is the
+  record of what moved
 
 ## Step 1 — assemble the brief
 
@@ -126,18 +141,83 @@ worked:
   deferred. A limit written down is a scope boundary; the same limit unwritten is a bug report
   waiting to be filed against you.
 - **Propagation notes** naming the doc each decision must reach — "these three protections go
-  in `SECURITY.md`".
+  in `SECURITY.md`" — and, where the slice already has a `PLAN.md`, whether the decision is
+  also a plan change (Step 6 rules on that).
 
-## Step 5 — propagate, stamp, commit
+## Step 5 — propagate into the spec docs
 
 Follow every propagation note from Step 4 into the doc it names: a decision that never reaches
 `SECURITY.md`/`ENTITIES.md`/`REQUIREMENTS.md` did not change the slice, it only changed a file
 about the slice. Add a `REQ-` id for any testable requirement a decision created.
 
-Stamp `TIMING.md` row "3. Specify" with `/kerbe:grill` and
-`TZ='{kerbe.timezone}' date '+%Y-%m-%d %H:%M'`. Delete `GRILLING_STATE.md`.
+## Step 6 — feed the decisions into the plan
 
-Commit **scoped by pathspec** — stage the named paths, check `git diff --cached --stat`, and
+**No `{planning_root}/{slice}/PLAN.md`** ⇒ nothing to do here: the decisions are in the spec
+docs and `/kerbe:plan` builds the plan from them. Say that at hand-off and go to Step 7.
+
+**A `PLAN.md` exists** ⇒ the decisions reach it here, in this session. A plan that was not
+amended is the pre-grilling plan, and the pre-grilling plan is the one the workers build.
+
+**Which decisions are plan changes.** A decision that only sharpens wording in a spec doc is
+not one. A decision that adds, drops or redirects a deliverable, changes an acceptance
+condition, or changes a seam another task consumes, is. Rule on each decision and report the
+split with counts — amended, spec-only — so nothing leaves the list silently.
+
+**Append one dated section at the end of the file**, never a rival plan file:
+
+```markdown
+## Amendment {YYYY-MM-DD} — grilling
+
+**Source:** `DECISIONS.md`, grilled {YYYY-MM-DD} — Q6, Q7, Q11
+
+- Task 4 — superseded by Task 9 (Q6): {the ruling, in one line}
+- Task 6 — dropped (Q7): {why}
+- Tasks 9, 10 — new (Q6, Q11)
+- Already built against Task 4: {what exists, or "nothing"} — {the user's call on it}
+
+### Task 9: ...
+```
+
+Three rules for what goes inside it:
+
+- **New work is new tasks**, numbered on from the highest existing task and authored to
+  `{plugin}/skills/plan/references/plan-spec.md` like any other: `**Files:**`, `**Effort:**`,
+  `**Interfaces:**` (seams only), `**Depends:**`, a case table with a `Level` per case,
+  bite-sized TDD checkbox steps, a pathspec-scoped commit step. An amendment task that skips
+  these is a task `/kerbe:implement` cannot schedule and `check_plan.py` will fail.
+- **Superseded work is named, never edited.** Do not touch the body of a frozen task: a worker
+  may already have read it, and the ledger measured it. The amendment's list is what says
+  Task 4 no longer stands, and every superseded or dropped task names what replaces it or why
+  nothing does.
+- **Every line cites its question id.** `(Q6)` is what ties the amendment back to
+  `DECISIONS.md` — the same traceability a `FIX_PLAN.md` task gets from its ledger id.
+
+**Re-run the structural check over the whole amended file:**
+
+```bash
+python3 {plugin}/fixtures/check_plan.py {planning_root}/{slice}/PLAN.md {design_required}
+```
+
+It reads the last task's body to end of file, so the amendment prose is checked as part of
+it: keep "TBD", "to be decided", "open question" and the rest out of the section wherever
+they would sit. Fix what it reports before committing.
+
+**State the two downstream effects at hand-off** — do not leave them to be discovered:
+
+- `/kerbe:implement {slice}` re-derives the tracker from the amended plan, and its
+  what-already-exists pass is what keeps finished tasks from being rebuilt; the amendment's
+  tasks join the schedule from their `Depends`.
+- a `PROMISES.md` beside the plan is now measuring a plan that moved: hand off to
+  `/kerbe:coverage {slice}` for a fresh extraction, and keep the old ledger as the diff.
+
+## Step 7 — stamp and commit
+
+Stamp `TIMING.md` row "3. Specify" with `/kerbe:grill` and
+`TZ='{kerbe.timezone}' date '+%Y-%m-%d %H:%M'`; note "plan amended" in the row when Step 6
+wrote one. Delete `GRILLING_STATE.md`.
+
+Commit **scoped by pathspec** — stage the named paths (`DECISIONS.md`, every spec doc Step 5
+touched, `PLAN.md` when Step 6 amended it, `TIMING.md`), check `git diff --cached --stat`, and
 commit as `git commit -m "..." -- <the same paths>`. The git index is shared per repository
 across concurrent sessions.
 
@@ -154,7 +234,11 @@ across concurrent sessions.
 | campaign dies at the context wall | the frontier is lost and the rounds restart from nothing | Step 3 |
 | ruling recorded without its reasoning | the same door gets reopened next month | Step 4 |
 | decisions never leave `DECISIONS.md` | the plan is built from the unrevised spec | Step 5 |
-| grilling after `PLAN.md` is frozen | findings can only reach `FIX_PLAN.md`; ledger needs re-extraction | Setup |
+| spec docs revised, existing `PLAN.md` left alone | the workers build the pre-grilling plan | Step 6 |
+| post-freeze findings pushed to `FIX_PLAN.md` | a remediation file whose tasks must cite ledger ids fills with tasks that cite none | Setup |
+| a frozen task edited in place to absorb a decision | a worker may already have read it, and the ledger measured it | Step 6 |
+| amendment task without `Depends`, effort or case levels | `/kerbe:implement` cannot schedule it and `check_plan.py` fails | Step 6 |
+| plan amended, ledger left as it was | `PROMISES.md` keeps measuring a plan that moved | Step 6 |
 
 ## Rules
 
@@ -165,6 +249,9 @@ across concurrent sessions.
 - The frontier empties or the session says it did not. A campaign abandoned mid-tree is
   reported as abandoned, with the open frontier left in `GRILLING_STATE.md`.
 - `GRILLING_STATE.md` is never committed and never outlives the campaign.
+- **A decision that changes the plan reaches the plan.** It lands as a dated amendment section
+  in the slice's own `PLAN.md` — never a rival plan file, never an edit to a frozen task body,
+  and never parked in `DECISIONS.md` for someone else to notice.
 - This skill writes only under `{planning_root}/` — never application code.
 - Any change to this skill must pass the grill gate in `fixtures/ACCEPTANCE.md` before it is
   used on a real project.
