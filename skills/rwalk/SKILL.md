@@ -43,6 +43,11 @@ sync. A row is **closed** when it carries an unstruck bold status
 `**EXPECTED**` / `**IMPROVED**` / `**REMOVED**` / `**BUG-{id} RAISED**`), and **open**
 when it carries none. Resume is therefore always derivable: the first open row wins.
 
+**Tier 3's state lives in the QR too** — as a bold status line directly under the
+`### Boilerplate` heading (Step 2 writes it). Tier 3 is **closed** when that line is
+present and **open** when it is absent, so a resumed walk never re-asks a tiering the
+human already accepted.
+
 - **Target QR** = the newest QR with any open row. All QRs closed ⇒ report
   `{slice} QR-{n}: {m}/{m} closed — nothing to walk` and stop.
 - **Start** = the first open row of that QR, scanning `B → G → F`.
@@ -55,7 +60,7 @@ Announce the resolved position in one line before the first turn, so a wrong gue
 one correction instead of a silent wrong start:
 
 ```
-{slice} · QR-{n} · {total} items · {open} open · resuming at {id}
+{slice} · QR-{n} · {total} items · {open} open · tier 3 {accepted {date} | open} · resuming at {id}
 ```
 
 ### Ids, and back-filling them
@@ -83,10 +88,41 @@ with a single turn instead:
 > Tier 3 — {n} files, trusted behind {the QR's test evidence}: {one-line grouping}.
 > Accept the tiering, or name any to challenge?
 
-Accepting closes tier 3 for this walk in one turn. A challenged file is read in-session
-against the tier-1 discipline; anything found becomes a **new flag** (`F{n+1}`, noted as
-raised by the walk) rather than a fabricated tier row, since the QR's tier tables record
-what the review classified, not what the walk re-classified.
+**The opening turn runs only while tier 3 is open.** Decide from the target QR's
+`### Boilerplate` section, in this order:
+
+1. It carries a status line ⇒ tier 3 is closed. Skip the opening turn; go to the start row.
+2. Its table is empty ⇒ nothing to accept. Skip the opening turn, write nothing.
+3. No status line, but the QR has at least one closed `B`/`G`/`F` row ⇒ an earlier walk
+   already passed the opening turn, before acceptance was recorded. Do not ask again:
+   back-fill `**TIER 3 ACCEPTED (inferred from closed rows) {today}**` and go to the start
+   row.
+4. Otherwise ⇒ run the opening turn.
+
+Accepting closes tier 3 in one turn — and is **recorded the moment it is given**, like
+any other verdict: insert the status line on its own paragraph directly under the
+`### Boilerplate` heading, above the table, leaving the table itself untouched:
+
+```
+### Boilerplate — don't read, trust the full suite
+
+**TIER 3 ACCEPTED {date}** — {n} files, behind {the QR's test evidence}
+
+| File | What it does |
+```
+
+A challenged file is read in-session against the tier-1 discipline; anything found
+becomes a **new flag** (`F{n+1}`, noted as raised by the walk) rather than a fabricated
+tier row, since the QR's tier tables record what the review classified, not what the walk
+re-classified. Once the challenges are read, tier 3 closes with the challenge on the
+record:
+
+```
+**TIER 3 ACCEPTED {date}** — {n} files, behind {evidence} · challenged: {file} → {F{n} | clean}
+```
+
+The status line rides the walk's single commit (Step 5); a walk that stops right after
+the opening turn still commits it.
 
 ## Step 3 — the item turn
 
