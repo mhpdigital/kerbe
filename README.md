@@ -124,7 +124,8 @@ mechanism behind the verdict. Tier 2 goes five to a turn and tier 3 closes in on
 the tiering already decided where the attention belongs. State lives in the rows — a row
 is open until it carries an unstruck bold status — so resume is derivable and there is no
 ledger file to keep in sync. `ok` / `fix` / `bug` / `defer` / `skip` / `back` / `stop`;
-anything else is discussion. The walk itself never edits application code: `fix` queues
+anything else is discussion. Open cells are treated as untrusted locators: rwalk resolves the
+current line and launches only an allowlisted, shell-free `editor_cmd`. The walk itself never edits application code: `fix` queues
 the ruled change, and when the walk ends every queued fix is built in one batch by
 `kerbe:implement` workers without asking again. The next `kerbe:review` records those
 commits as closed rows citing the ruling, so nobody walks their own fixes twice.
