@@ -14,7 +14,11 @@ REPO = pathlib.Path(__file__).resolve().parents[1]
 SKILLS = REPO / "skills"
 STACKS = REPO / "adapters" / "stack"
 EXECUTORS = REPO / "adapters" / "executor"
-PLUGIN_VERSION = "0.9.0"
+PLUGIN_VERSION = "0.9.1"
+
+# Main skill prompts are injected before supporting references are read. Keep explicit
+# budgets for skills whose prompt size is a compatibility invariant.
+MAIN_SKILL_BYTE_BUDGETS = {"rwalk": 6_000}
 
 # Mechanism names that belong in adapters/, never in a skill body.
 HARNESS_TOKENS = re.compile(r"Agent\(|isolation:|spawn_agent|TaskCreate|add-dir|additionalDirectories")
@@ -132,6 +136,12 @@ class SkillConfigSeamTest(unittest.TestCase):
 
 
 class PluginPackagingTest(unittest.TestCase):
+    def test_main_skill_prompt_budgets(self):
+        for skill_name, budget in MAIN_SKILL_BYTE_BUDGETS.items():
+            path = SKILLS / skill_name / "SKILL.md"
+            size = len(path.read_bytes())
+            self.assertLessEqual(size, budget, "%s is %d bytes (budget %d)" % (path, size, budget))
+
     def test_portable_and_host_manifests_share_identity_and_version(self):
         manifests = [
             json.loads((REPO / "plugin.json").read_text()),

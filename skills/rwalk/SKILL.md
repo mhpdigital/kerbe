@@ -2,218 +2,115 @@
 name: rwalk
 description: >-
   Use when a recorded review needs working through with a human — walks a QR's rows one
-  turn at a time, reads each one first and opens it in the editor, then records the
-  verdict in place and moves to the next, resuming wherever the last walk stopped.
+  turn at a time, pre-reads and opens each item, records verdicts in place, and resumes
+  from the first unresolved row.
 ---
 
-# kerbe:rwalk — walk a recorded review, row by row
+# kerbe:rwalk — walk a recorded review
 
-`/kerbe:review` **produces** the QR; nothing consumed it. A recorded review is a queue of
-decisions a human still has to make, and making them by hand — find the next unresolved
-row, copy its open command, read the code cold, type the strikethrough — costs more
-attention than the decisions themselves. This skill runs that queue: one row per turn,
-pre-read so the human confirms or challenges instead of reading cold, struck in place the
-moment it resolves.
-
-Position in the lifecycle: **after** `/kerbe:review`, before merge. The walk records
-verdicts; it never fixes code. A row that turns out to be a defect routes to `/kerbe:bug`
-exactly as the review's own findings do.
+`kerbe:review` produces a queue of decisions; this skill spends it with the human after
+review and before merge. It records verdicts but never fixes application code. Defects
+route to `kerbe:bug`.
 
 ## Setup
 
-1. Read `kerbe.yml` (hard stop if missing). Resolve `planning_root`, `editor_cmd` /
-   `editor_cmd_method`, and `workspace.*` for the branch → slice mapping.
-2. Resolve the **slice**: from the argument, else from the branch name
+1. Read `kerbe.yml`; missing is a hard stop. Resolve `planning_root`, `editor_cmd` /
+   `editor_cmd_method`, and `workspace.*`.
+2. Resolve the slice from the arguments, else the branch
    (`{workspace.branch_prefix}{slice}` / `{workspace.review_prefix}{slice}`), else ask.
-   Hard stop if `{planning_root}/{slice}/REVIEW.md` does not exist — say to run
-   `/kerbe:review` first.
-3. Arguments are positional but **type-sniffed, not order-bound**: a bare token matching
-   `^(QR-\d+/)?[BGF]\d+$` is a start id, anything else is the slice. Neither requires the
-   other.
+   Hard stop if `{planning_root}/{slice}/REVIEW.md` is missing: run `kerbe:review` first.
+3. Arguments are type-sniffed, not order-bound: `^(QR-\d+/)?[BGF]\d+$` is a start id;
+   another token is the slice.
+4. Before the first write to `REVIEW.md`, read
+   [references/recording.md](references/recording.md). Read its edge-case section earlier
+   if the QR lacks ids, tier 3 was challenged, a closed id was forced, or a row was
+   mis-tiered.
 
-## Step 1 — parse the QR and resolve the position
+## Resolve the position
 
-Parse every QR in the file into an ordered queue: the Business-logic rows, then the Glue
-rows, then the Flags. Boilerplate rows are never queued (see Step 2).
+Parse every QR in file order. Its queue is Business logic, then Glue, then Flags;
+Boilerplate is handled once as tier 3. Rows are addressed by their permanent leftmost
+ids: `B1…`, `G1…`, `F1…`.
 
-**A row's state lives in the row** — there is no ledger file and no walk state to keep in
-sync. A row is **closed** when it carries an unstruck bold status
-(`**RESOLVED**` / `**VERIFIED**` / `**FIXED**` / `**DEFERRED**` / `**FALSE POSITIVE**` /
-`**EXPECTED**` / `**IMPROVED**` / `**REMOVED**` / `**BUG-{id} RAISED**`), and **open**
-when it carries none. Resume is therefore always derivable: the first open row wins.
+A row is closed only when it has an unstruck bold status: `RESOLVED`, `VERIFIED`,
+`FIXED`, `DEFERRED`, `FALSE POSITIVE`, `EXPECTED`, `IMPROVED`, `REMOVED`, or
+`BUG-{id} RAISED`. Otherwise it is open. Tier 3 is closed by its bold status line directly
+under `### Boilerplate`.
 
-**Tier 3's state lives in the QR too** — as a bold status line directly under the
-`### Boilerplate` heading (Step 2 writes it). Tier 3 is **closed** when that line is
-present and **open** when it is absent, so a resumed walk never re-asks a tiering the
-human already accepted.
-
-- **Target QR** = the newest QR with any open row. All QRs closed ⇒ report
+- Target the newest QR with anything open. If all are closed, report
   `{slice} QR-{n}: {m}/{m} closed — nothing to walk` and stop.
-- **Start** = the first open row of that QR, scanning `B → G → F`.
-- **Forced id** overrides both. An id that is already closed is not silently re-opened —
-  ask once (`B3 is RESOLVED (VERIFIED) {date} — re-open it?`), because re-opening rewrites
-  a recorded verdict. A bare id while more than one QR has open rows resolves against the
-  newest and says which it chose; `QR-2/B3` qualifies it.
+- Start at its first open row in `B → G → F` order.
+- A forced id overrides this. If it is already closed, ask once before reopening it. A
+  bare id with multiple open QRs means the newest; say which QR was chosen.
 
-Announce the resolved position in one line before the first turn, so a wrong guess costs
-one correction instead of a silent wrong start:
+Before presenting anything, announce:
 
-```
+```text
 {slice} · QR-{n} · {total} items · {open} open · tier 3 {accepted {date} | open} · resuming at {id}
 ```
 
-### Ids, and back-filling them
+## Opening turn: tier 3
 
-Rows are addressed by an **ID column**, leftmost: `B1…Bn` business-logic, `G1…Gn` glue,
-`F1…Fn` flags. Ids are needed because line numbers are not stable handles — resolution
-prose lands in the row and shifts every line below it — and because the resume pointer,
-the commit message and any bug raised all need something to cite.
+Run this only while tier 3 is open:
 
-A REVIEW.md written before the ID column existed is **back-filled on first walk**: insert
-the header cell and one id per row in table order, and label any unlabelled flag in order
-of appearance. Never renumber an id that already exists, in either direction. Ids are
-permanent: a struck row keeps its id, and a new row takes the next free number.
-
-State is the bold status word, never a checkbox: a task-list checkbox does not render
-inside a table cell, and the strikethrough convention already carries done-ness. Two
-representations of one fact drift; one does not.
-
-## Step 2 — the opening turn: tier 3
-
-Boilerplate is the tier the review declares unread on purpose, so walking it row by row
-spends the human on exactly what the tiering already decided not to spend them on. Open
-with a single turn instead:
+1. Status line present: skip to the first row.
+2. Boilerplate table empty: skip and write nothing.
+3. No status but any `B`/`G`/`F` row is closed: infer an earlier walk passed this turn;
+   record the inferred acceptance per the reference, then continue.
+4. Otherwise ask one question and stop:
 
 > Tier 3 — {n} files, trusted behind {the QR's test evidence}: {one-line grouping}.
 > Accept the tiering, or name any to challenge?
 
-**The opening turn runs only while tier 3 is open.** Decide from the target QR's
-`### Boilerplate` section, in this order:
+Record acceptance immediately. Read challenged files with tier-1 discipline; a finding is
+a new flag, not a fabricated tier row. Then record the challenge result and close tier 3.
 
-1. It carries a status line ⇒ tier 3 is closed. Skip the opening turn; go to the start row.
-2. Its table is empty ⇒ nothing to accept. Skip the opening turn, write nothing.
-3. No status line, but the QR has at least one closed `B`/`G`/`F` row ⇒ an earlier walk
-   already passed the opening turn, before acceptance was recorded. Do not ask again:
-   back-fill `**TIER 3 ACCEPTED (inferred from closed rows) {today}**` and go to the start
-   row.
-4. Otherwise ⇒ run the opening turn.
+## Item turn
 
-Accepting closes tier 3 in one turn — and is **recorded the moment it is given**, like
-any other verdict: insert the status line on its own paragraph directly under the
-`### Boilerplate` heading, above the table, leaving the table itself untouched:
+One decision point per turn, then stop:
 
-```
-### Boilerplate — don't read, trust the full suite
+1. **Pre-read** the cited lines. Explain the actual mechanism in one or two sentences,
+   state honest uncertainty, and ask the specific question. Do not merely point at code or
+   default every pre-verdict to “looks right.”
+2. **Open** the row by running its Open cell verbatim after changing `\|` back to `|`.
+   Launch failure does not block the turn; report the path.
+3. **Stop and wait.** Never present the next row or resolve an unanswered row.
 
-**TIER 3 ACCEPTED {date}** — {n} files, behind {the QR's test evidence}
+Keep it short: row, mechanism, question. The code is already in the editor.
 
-| File | What it does |
-```
+For Glue only, batch up to five rows with a one-line pre-read each and open the first. One
+`ok` closes the batch. Prose about one row moves only that row into a single-item turn;
+the others wait. Never batch Business logic or Flags.
 
-A challenged file is read in-session against the tier-1 discipline; anything found
-becomes a **new flag** (`F{n+1}`, noted as raised by the walk) rather than a fabricated
-tier row, since the QR's tier tables record what the review classified, not what the walk
-re-classified. Once the challenges are read, tier 3 closes with the challenge on the
-record:
-
-```
-**TIER 3 ACCEPTED {date}** — {n} files, behind {evidence} · challenged: {file} → {F{n} | clean}
-```
-
-The status line rides the walk's single commit (Step 5); a walk that stops right after
-the opening turn still commits it.
-
-## Step 3 — the item turn
-
-One item, one turn. The turn has three parts and then it **stops**.
-
-1. **Pre-read.** Read the lines the row cites before presenting it, and lead with what
-   they actually do — the mechanism, in a sentence or two — followed by the specific thing
-   the human is being asked to judge. A row presented cold ("here is B4, go look") makes
-   the human do the reading the walk exists to have already done; a row presented with a
-   pre-verdict makes their turn a confirm-or-challenge. State honest uncertainty as
-   uncertainty; a pre-verdict that is always "looks right" is worth nothing.
-2. **Open it.** Run the row's Open cell verbatim, unescaping `\|` back to `|` first. A
-   failed launch (editor not running, path moved) is reported and never blocks the turn —
-   say the path instead.
-3. **Stop.** Wait. Never present the next row in the same turn, and never resolve a row
-   the human has not answered on.
-
-Keep the presentation short — the row, the mechanism, the question. The code is in their
-editor; re-pasting it is noise.
-
-## Step 4 — the verbs
+## Human verbs
 
 | Input | Effect |
 |---|---|
-| `ok` (or bare Enter) | strike the row, record `**RESOLVED (VERIFIED) {date}**` with the mechanism, next item |
-| *any prose or question* | stay on the row, discuss, write nothing — the verdict accumulates from the discussion |
-| `bug` | route to `/kerbe:bug`, strike with `**BUG-{id} RAISED**`, next item |
-| `defer` | strike with `**DEFERRED {date}**` + reason, mirror into the review guide's Known Issues, next item |
-| `skip` | leave the row untouched and open, next item |
-| `back` | return to the previous item |
-| `stop` | commit and report `{closed}/{total}` |
+| `ok` or bare Enter | Record `RESOLVED (VERIFIED)` with the pre-read mechanism; next item |
+| prose or a question | Discuss; stay on this item and write nothing |
+| `bug` | Route to `kerbe:bug`, record `BUG-{id} RAISED`; next item |
+| `defer` | Record `DEFERRED` with reason and mirror to Known Issues; next item |
+| `skip` | Leave open; next item |
+| `back` | Return to the previous item |
+| `stop` | Commit and report the tally |
 
-Anything not in the table is prose: discuss it, stay on the row.
+Anything else is discussion, not a verdict.
 
-## Step 5 — recording the verdict
+## Recording and finish
 
-Per the strikethrough convention, the original stays in place, struck; the status is bold
-and **unstruck**; the id cell is never struck, so the row stays addressable and greppable:
+Follow [references/recording.md](references/recording.md) for exact row/status syntax,
+id back-filling, challenged tier 3, decision routing, the scoped commit, and the final
+tally. Write each verdict immediately; commit once at `stop` or when the queue empties.
+Skipped rows keep the QR open—never report that walk as complete.
 
-```
-| B2 | ~~`{file}` · `{method}()` (L81–110)~~ **RESOLVED (VERIFIED) {date}** | ~~{original why}~~ Confirmed: {mechanism} | ~~{open cmd}~~ |
-```
+## Non-negotiable rules
 
-**The verdict must carry substance, not a conclusion.** "Confirmed correct" records
-nothing a later reader can check; "the existing-row lookup runs through
-`applyTenantScope()`, which binds the user from the security token, so no caller input can
-select another member's row" records why it is correct and survives the reviewer
-forgetting. An `ok` still gets the mechanism sentence from the pre-read.
-
-Write the edit **the moment the row resolves**, not at the end: a walk that dies mid-way
-must leave a truthful file. Commit once, at `stop` or completion, scoped by pathspec (the
-index is shared across concurrent sessions):
-
-```bash
-git -C {planning_repo} commit -m "{slice}: rwalk QR-{n} — {ids} resolved" -- <slices>/{slice}/REVIEW.md
-```
-
-**What the discussion produces goes where it belongs:** a defect → `/kerbe:bug`; a ruling
-about intended behaviour → the file's `## Design decisions` top-context section; something
-a human reviewer needs to know → the review guide's Known Issues and its Code Reviews
-Completed row. A promise that turns out not to be built is **not** a walk finding — that
-is the coverage ledger's denominator, and it routes to `/kerbe:coverage`.
-
-## Step 6 — glue batching
-
-Tier 2 is defined as flow-only, ~30s a file; one turn each spends more attention on the
-turn-taking than on the code. Present glue **five rows to a turn**, each with its
-one-line pre-read, and open the first. A single `ok` closes all five. Any prose about one
-row drops that row — only that row — into the Step 3 item turn, and the rest of the batch
-waits.
-
-Tier 1 and Flags are never batched. They are the rows the review exists to produce.
-
-## Step 7 — finishing
-
-When the queue empties, report the tally and what it produced (`{n} resolved · {n} bugs
-raised · {n} deferred · {n} skipped`), update the review guide's Known Issues for anything
-deferred, and commit. Rows left `skip`ped keep the QR open — say so plainly rather than
-reporting a walk as complete.
-
-## Rules
-
-- **Never edit application code during a walk.** The walk records verdicts; fixes route to
-  `/kerbe:bug` or back through the plan. A walk that starts fixing stops being a review
-  pass and loses the human's place in it.
-- One turn is one decision point. Never walk ahead of the human, and never mark a row they
-  did not answer on.
-- Never move a resolved row, never collect them into a "done" section, never prefix with
-  ✅ — strike in place, status unstruck beside it.
-- Never renumber an existing id, and never reuse one.
-- Re-tiering is a finding about the QR, not a silent correction: a glue or boilerplate row
-  that touches auth, ownership, query filtering, state transitions, uploads or money gets
-  the tier-1 discipline for its turn **and** a flag saying the review mis-tiered it.
-- The walk never asserts completeness of the review itself. It closes the rows the review
-  recorded; whether the review found everything is `/kerbe:review`'s adversarial pass.
+- Never edit application code. A defect routes to `kerbe:bug`; missing promised work
+  routes to `kerbe:coverage`.
+- Never mark a row the human did not answer on, and never walk ahead of them.
+- Keep resolved rows in place: id unstruck, original cells struck, status unstruck. Never
+  add checkboxes or ✅, renumber an id, or reuse one.
+- Treat auth, ownership, query filtering, state transitions, uploads, or money as tier 1.
+  If such a row was Glue or Boilerplate, also add a mis-tiering flag.
+- Close only the review's recorded rows. `rwalk` never claims the review itself was
+  complete.
