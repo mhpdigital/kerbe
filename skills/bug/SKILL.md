@@ -4,7 +4,6 @@ description: >-
   Use when a bug is reported or a change touches a data model, shared guard, migration or
   data flow — runs the impact analysis that finds every downstream consumer before the fix
   is written, so one commit closes the whole class instead of three chasing it.
-disable-model-invocation: true
 ---
 
 # kerbe:bug — impact analysis before the fix

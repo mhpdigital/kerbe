@@ -8,11 +8,13 @@ rather than silently missing.
 import pathlib
 import re
 import unittest
+import json
 
 REPO = pathlib.Path(__file__).resolve().parents[1]
 SKILLS = REPO / "skills"
 STACKS = REPO / "adapters" / "stack"
 EXECUTORS = REPO / "adapters" / "executor"
+PLUGIN_VERSION = "0.9.0"
 
 # Mechanism names that belong in adapters/, never in a skill body.
 HARNESS_TOKENS = re.compile(r"Agent\(|isolation:|spawn_agent|TaskCreate|add-dir|additionalDirectories")
@@ -127,6 +129,41 @@ class SkillConfigSeamTest(unittest.TestCase):
                         offenders.append("%s:%d: %s" % (path.relative_to(REPO), n, line.strip()))
         self.assertEqual(offenders, [],
                          "resolve through kerbe.yml instead:\n" + "\n".join(offenders))
+
+
+class PluginPackagingTest(unittest.TestCase):
+    def test_portable_and_host_manifests_share_identity_and_version(self):
+        manifests = [
+            json.loads((REPO / "plugin.json").read_text()),
+            json.loads((REPO / ".codex-plugin" / "plugin.json").read_text()),
+            json.loads((REPO / ".claude-plugin" / "plugin.json").read_text()),
+        ]
+        self.assertEqual({manifest["name"] for manifest in manifests}, {"kerbe"})
+        self.assertEqual({manifest["version"] for manifest in manifests}, {PLUGIN_VERSION})
+
+    def test_every_skill_has_matching_codex_invocation_policy(self):
+        for skill_dir in sorted(path for path in SKILLS.iterdir() if path.is_dir()):
+            skill = (skill_dir / "SKILL.md").read_text()
+            metadata_path = skill_dir / "agents" / "openai.yaml"
+            self.assertTrue(metadata_path.is_file(), metadata_path)
+            metadata = metadata_path.read_text()
+            self.assertIn("display_name:", metadata, metadata_path)
+            self.assertIn("short_description:", metadata, metadata_path)
+            self.assertNotIn("disable-model-invocation: true", skill, skill_dir)
+            self.assertIn("allow_implicit_invocation: false", metadata, metadata_path)
+
+    def test_codex_marketplace_publishes_the_root_plugin(self):
+        marketplace = json.loads(
+            (REPO / ".agents" / "plugins" / "marketplace.json").read_text()
+        )
+        entry = marketplace["plugins"][0]
+        self.assertEqual(marketplace["name"], "kerbe-marketplace")
+        self.assertEqual(entry["name"], "kerbe")
+        self.assertEqual(entry["source"]["source"], "url")
+        self.assertEqual(entry["source"]["url"], "https://github.com/mhpdigital/kerbe.git")
+        self.assertEqual(entry["source"]["ref"], "main")
+        self.assertEqual(entry["policy"]["installation"], "AVAILABLE")
+        self.assertEqual(entry["policy"]["authentication"], "ON_INSTALL")
 
 
 if __name__ == "__main__":

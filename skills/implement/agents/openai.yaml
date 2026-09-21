@@ -1,0 +1,5 @@
+interface:
+  display_name: "Kerbe: Implement"
+  short_description: "Build a slice from its frozen plan"
+policy:
+  allow_implicit_invocation: false

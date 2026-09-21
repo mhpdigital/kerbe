@@ -2,10 +2,10 @@
   "name": "kerbe",
   "displayName": "Kerbe",
   "description": "Portable slice-based SDLC skills with stack, design and executor adapters. Skills: start, figma, grill, plan, implement, bug, coverage, review, rwalk.",
-  "version": "0.8.1",
+  "version": "0.9.0",
   "author": {
     "name": "MHP Digital"
   },
   "license": "MIT",
-  "homepage": "https://github.com/jochendaum/kerbe"
+  "homepage": "https://github.com/mhpdigital/kerbe"
 }

@@ -5,7 +5,6 @@ description: >-
   gates, extracting UI elements with measurements, comparing the design against
   UI_ELEMENTS.md, filling a slice's Design-sources block, or checking design provenance
   and freshness of built UI.
-disable-model-invocation: true
 ---
 
 # kerbe:figma — the design leg

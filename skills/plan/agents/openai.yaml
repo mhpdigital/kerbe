@@ -1,0 +1,5 @@
+interface:
+  display_name: "Kerbe: Plan"
+  short_description: "Create a TDD plan from a settled slice"
+policy:
+  allow_implicit_invocation: false

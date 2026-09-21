@@ -5,7 +5,6 @@ description: >-
   runs the grilling rounds that turn silent assumptions into recorded decisions, then writes
   them into DECISIONS.md, the spec docs, and — when the slice already has one — the same
   PLAN.md as a dated amendment. This is kerbe's Specify step, between figma and plan.
-disable-model-invocation: true
 ---
 
 # kerbe:grill — settle the spec by interrogation

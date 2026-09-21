@@ -4,7 +4,6 @@ description: >-
   Use when a recorded review needs working through with a human — walks a QR's rows one
   turn at a time, reads each one first and opens it in the editor, then records the
   verdict in place and moves to the next, resuming wherever the last walk stopped.
-disable-model-invocation: true
 ---
 
 # kerbe:rwalk — walk a recorded review, row by row

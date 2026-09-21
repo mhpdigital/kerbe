@@ -1,0 +1,29 @@
+{
+  "name": "kerbe",
+  "version": "0.9.0",
+  "description": "Portable slice-based SDLC skills with stack, design and executor adapters.",
+  "author": {
+    "name": "MHP Digital",
+    "url": "https://mhpdigital.co.nz"
+  },
+  "homepage": "https://github.com/mhpdigital/kerbe",
+  "repository": "https://github.com/mhpdigital/kerbe",
+  "license": "MIT",
+  "keywords": ["sdlc", "planning", "implementation", "code-review"],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Kerbe",
+    "shortDescription": "Take thin feature slices from planning to verified code",
+    "longDescription": "A portable slice-based SDLC with explicit specification, planning, implementation, coverage and review workflows.",
+    "developerName": "MHP Digital",
+    "category": "Developer Tools",
+    "capabilities": ["Interactive", "Write"],
+    "websiteURL": "https://github.com/mhpdigital/kerbe",
+    "defaultPrompt": [
+      "Show the status of my Kerbe slices.",
+      "Plan the next settled Kerbe slice.",
+      "Review the completed Kerbe slice."
+    ],
+    "brandColor": "#2563EB"
+  }
+}

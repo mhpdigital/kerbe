@@ -4,7 +4,6 @@ description: >-
   Use when a slice's frozen plan is ready to build — resolves the workspace, derives the
   live progress tracker from the plan, dispatches one isolated worker per task, and gates
   each task on real verification evidence. Also runs remediation from a coverage fix list.
-disable-model-invocation: true
 ---
 
 # kerbe:implement — build the slice from its frozen plan

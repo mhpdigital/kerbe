@@ -4,7 +4,6 @@ description: >-
   Use when a slice's diff is ready for review — categorises every changed file by risk
   tier, produces per-line open commands for the business-logic rows, runs an adversarial
   pass over its own review, and records it as a numbered QR in the slice's REVIEW.md.
-disable-model-invocation: true
 ---
 
 # kerbe:review — risk-tiered code review, recorded

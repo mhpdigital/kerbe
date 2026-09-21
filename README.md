@@ -1,16 +1,31 @@
 # Kerbe
 
-Portable slice-based SDLC skills for Claude Code, with stack and design adapters. The
+Portable slice-based SDLC skills for Claude Code and Codex, with stack and design adapters. The
 lifecycle is stack-agnostic; everything project- or stack-specific lives in a `kerbe.yml`
 config and swappable adapter files — never in a skill body.
 
 *Kerbe* (German): a notch cut through the full thickness of the material — the geometry of a
 thin vertical slice. See `ROADMAP.md` for the full project plan and naming rationale.
 
-## Install (local, while in development)
+## Install
 
-Point Claude Code at this repository as a local plugin (marketplace metadata is in
-`.claude-plugin/`). Skills are invoked as `/kerbe:<skill>`.
+Claude Code:
+
+```text
+/plugin marketplace add mhpdigital/kerbe
+/plugin install kerbe@kerbe-marketplace
+```
+
+Codex and ChatGPT use the portable Agent Plugins manifest at `plugin.json`. Add the repository's
+marketplace, install Kerbe, then start a new conversation so the installed skills are loaded:
+
+```bash
+codex plugin marketplace add mhpdigital/kerbe
+codex plugin add kerbe@kerbe-marketplace
+```
+
+Claude Code invokes a skill as `/kerbe:<skill>`. Codex lists the installed Kerbe skills in its
+skill picker; choose the skill by its `Kerbe: …` display name or mention it explicitly.
 
 ## Skills
 
@@ -117,8 +132,8 @@ aspect ratio.
 
 ## Repository layout
 
-- `skills/` — the plugin skills (`coverage`, `start`, `figma`, `plan`, `implement`, `bug`,
-  `review`, `rwalk`)
+- `skills/` — the plugin skills (`coverage`, `start`, `figma`, `grill`, `plan`, `implement`,
+  `bug`, `review`, `rwalk`), with shared `SKILL.md` instructions and host-specific metadata
 - `adapters/` — design adapters (`figma`, `claude-design` — git-committed `*.dc.html`
   artboards, node id = element `id`, no API — and `none`), stack adapters (`symfony`, `flutter`:
   `verify.md` / `commands.md` / `impact.md` / `risk-tiers.md`), executor adapters (`claude`, `inline`)

@@ -4,7 +4,6 @@ description: >-
   Use when a slice's spec docs are settled and the next step is a task-by-task TDD
   implementation plan — the step between specifying a slice and building it. Produces the
   slice's frozen PLAN.md, or a remediation plan for a fix list from a coverage run.
-disable-model-invocation: true
 ---
 
 # kerbe:plan — freeze the task list

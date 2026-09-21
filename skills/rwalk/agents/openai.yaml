@@ -1,0 +1,5 @@
+interface:
+  display_name: "Kerbe: Review Walk"
+  short_description: "Walk a recorded review with a human"
+policy:
+  allow_implicit_invocation: false

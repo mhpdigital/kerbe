@@ -4,7 +4,6 @@ description: >-
   Use when starting a new feature slice — create its folder, populate the spec docs from
   the lifecycle and stack-adapter templates, and register it in the slice index — or when
   asked for slice status, the slice list, or to advance a slice's lifecycle stage.
-disable-model-invocation: true
 ---
 
 # kerbe:start — open a slice

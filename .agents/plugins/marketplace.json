@@ -1,0 +1,21 @@
+{
+  "name": "kerbe-marketplace",
+  "interface": {
+    "displayName": "Kerbe"
+  },
+  "plugins": [
+    {
+      "name": "kerbe",
+      "source": {
+        "source": "url",
+        "url": "https://github.com/mhpdigital/kerbe.git",
+        "ref": "main"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Developer Tools"
+    }
+  ]
+}

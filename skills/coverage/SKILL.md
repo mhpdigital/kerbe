@@ -5,7 +5,6 @@ description: >-
   plan task everything the design and spec promise?) or before sign-off (is everything
   promised actually built and wired?) — or when the user asks what is missing, whether
   anything was dropped between design, spec, plan and code, or for a to-build inventory.
-disable-model-invocation: true
 ---
 
 # kerbe:coverage — is anything promised missing from the build?

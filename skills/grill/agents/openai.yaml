@@ -1,0 +1,5 @@
+interface:
+  display_name: "Kerbe: Grill"
+  short_description: "Settle slice decisions before planning"
+policy:
+  allow_implicit_invocation: false

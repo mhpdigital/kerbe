@@ -1,0 +1,5 @@
+interface:
+  display_name: "Kerbe: Bug"
+  short_description: "Analyse impact before fixing a defect"
+policy:
+  allow_implicit_invocation: false

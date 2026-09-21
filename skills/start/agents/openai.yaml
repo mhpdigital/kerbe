@@ -1,0 +1,5 @@
+interface:
+  display_name: "Kerbe: Start"
+  short_description: "Create or inspect a Kerbe feature slice"
+policy:
+  allow_implicit_invocation: false

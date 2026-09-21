@@ -1,0 +1,5 @@
+interface:
+  display_name: "Kerbe: Figma"
+  short_description: "Grade and extract a slice's Figma design"
+policy:
+  allow_implicit_invocation: false

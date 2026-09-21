@@ -1,0 +1,14 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "kerbe",
+  "version": "0.9.0",
+  "description": "Portable slice-based SDLC skills with stack, design and executor adapters.",
+  "author": {
+    "name": "MHP Digital",
+    "url": "https://mhpdigital.co.nz"
+  },
+  "homepage": "https://github.com/mhpdigital/kerbe",
+  "repository": "https://github.com/mhpdigital/kerbe",
+  "license": "MIT",
+  "keywords": ["sdlc", "planning", "implementation", "code-review"]
+}

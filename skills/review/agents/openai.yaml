@@ -1,0 +1,5 @@
+interface:
+  display_name: "Kerbe: Review"
+  short_description: "Run and record a risk-tiered code review"
+policy:
+  allow_implicit_invocation: false

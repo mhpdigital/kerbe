@@ -1,0 +1,5 @@
+interface:
+  display_name: "Kerbe: Coverage"
+  short_description: "Check a slice against its promised scope"
+policy:
+  allow_implicit_invocation: false
