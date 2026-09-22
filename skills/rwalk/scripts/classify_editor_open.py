@@ -57,15 +57,20 @@ def classify(template: str, file_name: str, line: int) -> dict:
     if not argv:
         raise UnsafeEditorCommand("template has no executable")
 
+    if "/" in template_argv[0] or "\\" in template_argv[0]:
+        raise UnsafeEditorCommand("editor executable must be an allowlisted command name, not a path")
     executable = pathlib.Path(argv[0]).name.lower()
     if executable in JETBRAINS:
         expected = [template_argv[0], "--line", "{line}", "{file}"]
+        approval_prefix = [argv[0], "--line"]
     elif executable in VSCODE:
         expected = [template_argv[0], template_argv[1] if len(template_argv) > 1 else "", "{file}:{line}"]
         if len(template_argv) != 3 or template_argv[1] not in ("-g", "--goto"):
             raise UnsafeEditorCommand("VS Code-family template must be: editor -g {file}:{line}")
+        approval_prefix = argv[:2]
     elif executable in SUBLIME:
         expected = [template_argv[0], "{file}:{line}"]
+        approval_prefix = argv
     else:
         raise UnsafeEditorCommand("executable is not an allowlisted editor")
 
@@ -77,6 +82,7 @@ def classify(template: str, file_name: str, line: int) -> dict:
     return {
         "classification": "direct_editor_open",
         "argv": argv,
+        "approval_prefix": approval_prefix,
         "shell_command": shlex.join(argv),
     }
 
