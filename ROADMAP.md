@@ -1386,6 +1386,33 @@ schema-constrained output.
 
 ---
 
+## Backlog — verification engineering gaps (noted 2026-09-24, not yet scheduled)
+
+Source: *Test & Verification Engineering for Coding Agents: Contracts, Reviewers, and Verifiers*
+(Mixture of Experts, Norin Lavaee — https://www.youtube.com/watch?v=C5tQhQUlgeI), first ~6:20.
+The talk's principles: oracle before work, author ≠ reviewer, deterministic over probabilistic,
+verify on the real platform, evidence that tests ran (not the agent's say-so), engineer in the
+loop, and scaling verification to the size of the change. Kerbe already covers oracle-first
+(`plan` case tables + acceptance floor, `coverage` frozen PROMISES ledger), author ≠ reviewer
+(`implement` isolated workers, `review` fresh critic, `coverage` verifier agents) and engineer in
+the loop (`grill`, `rwalk`). The gaps below are what it does not do yet. The remaining ~31 min of
+the talk (Atomic's contracts/reviewers/verifiers) is unreviewed — watch before designing these.
+
+- [ ] **Verify on the running platform, not only via tests.** `browser`/`http` case levels prove
+      the test exists; nothing launches the app and drives the change. Add a step (likely in
+      `implement`'s gate or `review`) that runs the real app per the stack adapter and records what
+      was observed. Canary / inner-ring deploy is out of scope until an adapter has a deploy seam.
+- [ ] **Machine-captured test evidence.** `implement` Step 5 demands pasted full-suite output, but
+      the paste is still agent-produced. Capture command, exit code and an output hash through a
+      committed wrapper or hook so "suite passed" is verifiable without trusting the agent. Pairs
+      with the Phase 1.5 `PreToolUse` enforcement hook idea.
+- [ ] **More deterministic gates.** Beyond `verdict.py`: structured-output schemas for worker
+      reports, critic findings and QR rows, validated by script rather than read by an agent.
+- [ ] **Verification budget per change.** Risk tiers are per file and effort tiers per task;
+      nothing sizes verification to the whole change (200-line fix vs module vs migration; minutes
+      vs hours vs overnight). Add a budget decision to `plan` (or `review`) and let long-running
+      verification run in the background while the human reviews in parallel.
+
 ## Non-goals — noted, not scheduled
 
 **Per-change coding discipline (single fixes) is outside the suite, deliberately.** Kerbe's
