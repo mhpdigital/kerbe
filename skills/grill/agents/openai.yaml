@@ -1,5 +1,5 @@
 interface:
   display_name: "Kerbe: Grill"
-  short_description: "Settle slice decisions before planning"
+  short_description: "Settle a plan draft's open decisions with the user"
 policy:
   allow_implicit_invocation: false

@@ -9,9 +9,10 @@
 |------|-------|----------------|-------|
 | 1. Start | `/kerbe:start` | {YYYY-MM-DD HH:MM} | |
 | 2. Design | `/kerbe:figma` | — | |
+| 2a. Plan draft | `/kerbe:plan` | — | |
 | 3. Specify | `/kerbe:grill` | — | |
 | 4. Scaffold | `/kerbe:scaffold` | — | |
-| 5. Plan impl. | `/kerbe:plan` | — | |
+| 5. Plan impl. | `/kerbe:plan` (freeze) | — | |
 | 6. Implement | `/kerbe:implement` | — | |
 | 7. Coverage | `/kerbe:coverage` | — | |
 | 8. Verify | `/kerbe:audit` | — | |

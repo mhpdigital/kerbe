@@ -21,8 +21,11 @@ flowchart TB
         DGATE{"design_required?<br/>asked, never inferred"}:::gate
         FIGMA["kerbe:figma<br/>leaves + node ids"]:::skill
         SPECS["Fill the specs — UI_ELEMENTS · ENTITIES · ROUTES<br/>SECURITY · DONE_CRITERIA · REQUIREMENTS"]:::artifact
-        PLAN["kerbe:plan"]:::skill
+        PLAN["kerbe:plan — draft<br/>every task written · decisions listed, not made"]:::skill
         DFRESH{"Design gate: node ids present?<br/>measured after the last change?"}:::gate
+        DRAFTMD[("PLAN.md — DRAFT<br/>open decisions OD-n, each with a recommendation")]:::artifact
+        GRILL["kerbe:grill<br/>a person rules on each OD-n → DECISIONS.md"]:::skill
+        FREEZE["kerbe:plan — freeze<br/>every ruling folded into its task"]:::skill
         PLANMD[("PLAN.md — FROZEN · the HOW, with code")]:::artifact
         COVPRE["kerbe:coverage — pre-impl<br/>is every promise tasked?"]:::skill
         IMPL["kerbe:implement<br/>workspace · claude-progress.md · one worker per task"]:::skill
@@ -35,7 +38,10 @@ flowchart TB
         DGATE -- "false + dated reason" --> SPECS
         SPECS --> PLAN --> DFRESH
         DFRESH -- "unfilled / stale" --> FIGMA
-        DFRESH -- "fresh" --> PLANMD --> COVPRE
+        DFRESH -- "fresh" --> DRAFTMD
+        DRAFTMD -- "decisions open" --> GRILL --> FREEZE --> PLANMD
+        DRAFTMD -- "nothing open — frozen in the same run" --> PLANMD
+        PLANMD --> COVPRE
         COVPRE -- "a promise is untasked" --> PLAN
         COVPRE -- "everything tasked" --> IMPL --> TGATE
         TGATE -- "yes" --> FULLRUN --> MORE
@@ -91,10 +97,17 @@ to cut generously rather than defensively.
 
 ## What each loop is for
 
-**Loop 1 builds the slice.** It has three gates that stop rather than guess: `design_required`
-must be answered before any doc is written; a UI plan cannot be frozen against a design that
-was never measured or has moved since; and a task touching a global-effect artifact is not
-done until the full suite has run and its output is pasted.
+**Loop 1 builds the slice.** It has four gates that stop rather than guess: `design_required`
+must be answered before any doc is written; a UI plan cannot be drafted against a design that
+was never measured or has moved since; a plan cannot be frozen while a decision it listed has
+no ruling in `DECISIONS.md`; and a task touching a global-effect artifact is not done until
+the full suite has run and its output is pasted.
+
+The plan is drafted **before** it is grilled because writing the tasks is what surfaces most
+of a slice's real decisions. The draft lists them with a recommended answer instead of
+making them; `kerbe:grill` puts them to the person who owns them; the freeze folds each
+ruling into the task it changes. Grilling first would have only the spec to ask about, and
+freezing first would turn every later answer into an amendment.
 
 **Loop 2 closes the gap between what was promised and what shipped.** Its input is the frozen
 ledger's open rows, and its exit is `verdict.py` — not anybody's summary. The denominator does

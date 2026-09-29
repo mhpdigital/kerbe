@@ -6,7 +6,7 @@ Master index of all slices. Update this file whenever a slice changes stage.
 
 ## Status Key
 
-`planning` → `scoped` → `ready` → `in-progress` → `in-review` → `done` | `dropped` | `parked` (built, blocked on an external dependency)
+`planning` → `scoped` → `drafted` (plan drafted, open decisions waiting on a grill) → `ready` → `in-progress` → `in-review` → `done` | `dropped` | `parked` (built, blocked on an external dependency)
 
 ---
 

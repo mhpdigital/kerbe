@@ -1,18 +1,20 @@
 ---
 name: grill
 description: >-
-  Use when a slice's spec docs are drafted but the decisions behind them are not settled —
-  runs the grilling rounds that turn silent assumptions into recorded decisions, then writes
-  them into DECISIONS.md, the spec docs, and — when the slice already has one — the same
-  PLAN.md as a dated amendment. This is kerbe's Specify step, between figma and plan.
+  Use when a slice's plan draft lists open decisions, or its spec docs carry decisions
+  nobody has made — runs the grilling rounds that put them to the person who owns them,
+  then writes the rulings into DECISIONS.md and the spec docs, and — when the plan is
+  already frozen — into PLAN.md as a dated amendment. kerbe's Specify step, between the
+  plan draft and the freeze.
 ---
 
-# kerbe:grill — settle the spec by interrogation
+# kerbe:grill — settle the decisions by interrogation
 
-`/kerbe:plan` Step 1 requires a spec whose **open questions are resolved**, because "a plan
-written on an unsettled spec churns, and it churns after it has been frozen and handed to
-workers". This skill is how they get resolved: grilling rounds against the slice's own docs,
-ending in a `DECISIONS.md` the plan and the requirements can cite.
+`/kerbe:plan` freezes nothing a person has not ruled on: its draft lists every decision it
+surfaced as `OD-n` with a recommended answer, and its freeze folds in only rulings
+`DECISIONS.md` records. This skill is how those rulings get made: grilling rounds against
+the draft's open decisions and the slice's own docs, ending in a `DECISIONS.md` the plan and
+the requirements can cite.
 
 It is a **wrapper**, not a new interrogation method. The rounds come from the grilling skill
 your install provides (`mattpocock-skills:grilling` at time of writing): a design tree worked
@@ -24,8 +26,23 @@ result somewhere durable. Everything project-specific resolves through `kerbe.ym
 
 ## Where it sits
 
-Lifecycle step **3, Specify** — after `/kerbe:figma`, before `/kerbe:plan`. The docs exist
-from `/kerbe:start`; this is where the decisions inside them stop being assumptions.
+Lifecycle step **3, Specify** — between the plan draft and the freeze:
+
+```
+kerbe:figma → kerbe:plan (draft) → kerbe:grill → kerbe:plan (freeze)
+```
+
+It sits after the draft on purpose. A spec read on its own shows few of a slice's real
+decisions; writing the tasks shows most of them — which table a task writes, which of two
+routes a seam uses, what a case asserts. Grilling after the draft gets all of those in one
+campaign, while the plan can still absorb every answer in its task bodies.
+
+The same step runs in two other places, and the Setup below says how to tell them apart:
+
+- **Before any draft** — a slice whose spec is too open to task at all. The decisions go to
+  `DECISIONS.md` and the spec docs; the draft then starts from them.
+- **After the freeze** — the decisions go to `DECISIONS.md` and the spec docs, and Step 6
+  carries the ones that change work into `PLAN.md` as a dated amendment (below).
 
 Run **after** a plan is frozen it is the same step with one more destination: the decisions
 still go to `DECISIONS.md` and the spec docs, and Step 6 carries the ones that change work
@@ -49,7 +66,25 @@ read it. Resolve the slice from the argument, else the branch
 stop if `{planning_root}/{slice}/` does not exist — say to run `/kerbe:start` first. Honour
 `kerbe.constraints` and `kerbe.constraints_by_skill.grill`.
 
-**If `PLAN.md` already exists, grilling still lands in that plan.** Frozen means a task body
+**A person has to be there.** Grilling is questions to the person who owns the decisions,
+and a session with nobody to answer — an unattended or scheduled run — has no one to ask.
+Running that way, do Step 1, write the brief and the seeded round into `GRILLING_STATE.md`,
+report that a person is needed, and stop. **Never answer a round yourself**, not even "by
+inspection" and not even when the recommendation looks obvious: a ruling a session made for
+itself reads, once recorded, exactly like one the user made — which is the Rules section's
+first prohibition. A question the code answers was never a grilling question, and Step 2
+already routes it to a sub-agent before the round is asked.
+
+**Read `PLAN.md`'s `**Status:**` line** — it decides where the rulings land:
+
+- **no `PLAN.md`** ⇒ spec only. Step 6 has nothing to do.
+- **`**Status:** draft`** ⇒ the usual case. The draft's `## Open decisions` entries are round
+  one (Step 1, part 7), each keeping its `OD-n` id as its question id so the freeze can find
+  the ruling. Step 6 writes nothing into the plan: the draft is not frozen, and
+  `/kerbe:plan`'s freeze mode folds every ruling into the task it changes.
+- **`**Status:** frozen`, or no Status line** ⇒ post-freeze. The rest of this section.
+
+**If a frozen `PLAN.md` already exists, grilling still lands in that plan.** Frozen means a task body
 is never rewritten; it does not mean the plan is closed. `/kerbe:plan`'s own rule is that a
 frozen plan is amended by **a dated amendment section at its end**, and that is where a
 post-freeze decision goes — Step 6 writes it, into the same `PLAN.md`, in the same session.
@@ -93,9 +128,12 @@ Seven parts, in order:
 6. **Deferred recording.** "Record nothing yet: when the frontier is empty, we write the
    decisions into `{planning_root}/{slice}/DECISIONS.md`." Recording mid-campaign produces a
    file that contradicts itself as later rounds reshape earlier answers.
-7. **Seeded round one.** The open questions the docs already flag — a `[Q]` marker, a TODO, a
-   contradiction between two docs, a requirement with no entity behind it. Hand grilling the
-   questions the slice has already asked itself rather than making it rediscover them.
+7. **Seeded round one.** First, when the plan is a draft, **every `OD-n` in its
+   `## Open decisions`**, each with its options and the draft's recommended answer, under
+   its own id — those are the questions writing the tasks turned up, and the reason the
+   draft came first. Then the open questions the docs already flag — a `[Q]` marker, a TODO,
+   a contradiction between two docs, a requirement with no entity behind it. Hand grilling
+   the questions the slice has already asked itself rather than making it rediscover them.
 
 Show the assembled brief to the user before invoking, and let them add to it. They know which
 decisions they are actually unsure about; the docs only know which ones are unwritten.
@@ -132,7 +170,9 @@ worked:
   Settled by grilling on {date}; each heading names the grilling question(s) it resolved."
 - **Sections by topic, citing question ids** — `### Session and chip state (Q1)`,
   `### Dismissed chips (Q2, Q11)`. Topic first so it is readable by someone who never saw the
-  rounds; ids second so it is traceable by someone who did.
+  rounds; ids second so it is traceable by someone who did. A draft's open decision keeps
+  its id — `### Route shape (OD-2)` — because `/kerbe:plan`'s freeze looks each one up by
+  it and stops on any `OD-n` it cannot find.
 - **Each bullet records the ruling _and_ the reasoning.** "We chose X" is not a decision
   record, it is a note. Quote the user where they ruled something out explicitly — the reason
   a door was closed is what stops it being reopened in three weeks.
@@ -154,7 +194,12 @@ about the slice. Add a `REQ-` id for any testable requirement a decision created
 **No `{planning_root}/{slice}/PLAN.md`** ⇒ nothing to do here: the decisions are in the spec
 docs and `/kerbe:plan` builds the plan from them. Say that at hand-off and go to Step 7.
 
-**A `PLAN.md` exists** ⇒ the decisions reach it here, in this session. A plan that was not
+**A draft `PLAN.md` (`**Status:** draft`)** ⇒ do not touch it. Check that every `OD-n` in
+its section has a ruling in `DECISIONS.md` under that id, and report any that do not — the
+freeze will stop on them. Hand off to `/kerbe:plan {slice}`, which folds the rulings into
+the tasks and freezes. Go to Step 7.
+
+**A frozen `PLAN.md` exists** ⇒ the decisions reach it here, in this session. A plan that was not
 amended is the pre-grilling plan, and the pre-grilling plan is the one the workers build.
 
 **Which decisions are plan changes.** A decision that only sharpens wording in a spec doc is
@@ -225,6 +270,9 @@ across concurrent sessions.
 | Anti-pattern | What happens | Caught at |
 |---|---|---|
 | bare `/grill-me` with no brief | rounds interrogate the wrong altitude, or re-derive what the docs already settled | Step 1 |
+| grilling run unattended answers its own rounds | the recorded rulings look like the user's and nobody ruled | Setup |
+| grilling before the plan draft | the thin spec yields few questions; the ones the tasks would surface arrive after the freeze as amendments | Where it sits |
+| a draft's open decision recorded under a new id | the freeze cannot find the ruling and stops | Step 4 |
 | pasting doc contents into the brief | burns the context the rounds need, and goes stale the moment a doc changes | Step 1, paths only |
 | whole parent `DECISIONS.md` in scope | rounds re-litigate decisions another slice already made | Step 1, ID range |
 | dependency state omitted | grilling re-opens a contract that already shipped | Step 1, part 4 |
@@ -244,7 +292,8 @@ across concurrent sessions.
 - **The decisions are the user's; the facts are yours.** Every question put to them must be one
   no amount of reading could answer.
 - Never record a decision the user did not make. An inferred ruling in `DECISIONS.md` is worse
-  than an open question, because it stops looking like one.
+  than an open question, because it stops looking like one. Nobody present to answer means
+  the campaign waits in `GRILLING_STATE.md`; it never means the session answers.
 - The frontier empties or the session says it did not. A campaign abandoned mid-tree is
   reported as abandoned, with the open frontier left in `GRILLING_STATE.md`.
 - `GRILLING_STATE.md` is never committed and never outlives the campaign.

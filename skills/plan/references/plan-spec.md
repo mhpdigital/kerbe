@@ -28,6 +28,7 @@ otherwise get wrong.
 **Spec:** the slice folder — the plan argues *from* the spec, so the spec travels with it.
 **Design:** `design_required: true|false`; when false, the reason from SETTINGS.md; when
 true, the file key + page and the date the design was measured.
+**Status:** draft | frozen — `draft` while any decision below is open; the freeze flips it.
 
 ## Global Constraints
 
@@ -39,6 +40,25 @@ include this section:
 - every `kerbe.constraints` line
 - version floors, naming/copy rules, platform requirements from the spec
 ```
+
+## Open decisions — drafts only
+
+A draft carries, after the file-structure map and **before the first task**, the decisions
+the plan surfaced that a person has to make:
+
+```markdown
+## Open decisions
+
+### OD-1: {the question, one line}
+**Affects:** Task 2, Task 4
+**Options:** {the real alternatives, each with its cost}
+**Recommended:** {the pick} — {why, citing the spec, the code or a sibling slice}
+```
+
+Each task the answer changes carries `**Decisions:** OD-1 (open) — {what it decides here}`
+and is written for the recommended answer. `/kerbe:grill` asks them; the freeze folds the
+rulings in and deletes the section. A frozen plan has no such section and no `(open)`
+marker — `check_plan.py` fails either.
 
 ## File-structure map
 
@@ -246,9 +266,10 @@ Counts are welcome as evidence *after* a run, in the tracker. They are not a gat
 **Decisions:** the rulings this task must not re-litigate, **each citing where it was
 decided** — a `DECISIONS.md` id, a `REQ-` id, or a dated spec-doc clause. The planner does
 not mint decisions: a choice that no doc records and that a human could reasonably make
-differently (a policy, a limit, a boundary, a format) is a spec gap — send it back to the
-specification step (a grilling round, or `/kerbe:start`) and freeze with the answer in
-hand, or write it as `worker's call` and let the worker choose. Empty is the normal state
+differently (a policy, a limit, a boundary, a format) is an **open decision** — in a draft,
+`OD-n (open)` here and an entry in `## Open decisions`; it is grilled, and the freeze
+replaces the marker with the ruling. Or, where it truly does not matter, write it as
+`worker's call` and let the worker choose. Empty is the normal state
 at `low` and `standard`; at `deep`, an open item names what the worker is to settle and
 report — and it must be answerable **from the codebase**, by someone reading it. Say what
 is already settled alongside it, so the open ground is bounded.
@@ -288,9 +309,11 @@ These are plan failures, not shorthand:
 - a case table with no `Level` column, or `**Depends:**` omitted — both are read by the
   scheduler, and a missing one is not a default, it is a task that cannot be placed
 - an unresolved question parked in the plan ("open question", "to be decided", "decide
-  later") — the plan is where questions get answered, and at freeze there are none left. A
-  `deep` task's `Decisions` block is the one legal home for open ground, and it says what the
-  worker settles and reports, not what nobody got to.
+  later") — the plan is where questions get answered, and at freeze there are none left.
+  A draft's `## Open decisions` section is the one home for a question a *person* owns,
+  in the shape above; a `deep` task's `Decisions` block is the one home for open ground the
+  *codebase* answers, and it says what the worker settles and reports, not what nobody got
+  to.
 
 **Not a placeholder:** "implement to pass the cases; follow the pattern in `<existing file>`"
 at `standard` or `deep` effort. The cases say what must be true and the named file says what
@@ -317,22 +340,22 @@ Run this yourself — it is a checklist, not a dispatch:
    `standard` or `deep` task fails the freeze; a `Produces` entry without a named consumer
    fails the freeze.
 5a. **Decision provenance** — every line in every `Decisions` block cites a `DECISIONS.md`
-   id, a `REQ-` id or a dated spec clause, or reads `worker's call`. A ruling with no
-   citation is one the planner made up; it goes back to the specification step before
-   the freeze, because once frozen it will be read as if a human had decided it.
-6. **Open decisions** — every `Decisions` block at `low` or `standard` is answered. A
-   question left for the worker at those levels is an unanswered planning question wearing a
-   task's clothes, and unattended runs cannot answer it. Settle it, or raise the task to
-   `deep` and say what the worker is to settle and report.
+   id, a `REQ-` id or a dated spec clause, reads `worker's call`, or — in a draft only —
+   reads `OD-n (open)`. A ruling with no citation is one the planner made up; make it an
+   open decision instead, because once frozen it will be read as if a human had decided it.
+6. **Open decisions** — every `Decisions` block at `low` or `standard` is answered, or — in
+   a draft — marked `OD-n (open)` with its entry in the section. A question left for the
+   worker at those levels is an unanswered planning question wearing a task's clothes, and
+   unattended runs cannot answer it. List it, or, if the codebase answers it, raise the task
+   to `deep` and say what the worker is to settle and report.
 
    **`deep` is not a parking space.** An open item there must be answerable from the
    codebase by someone reading it — which repository owns this lookup, which of two existing
    patterns fits, where an existing value comes from. A question that needs a *human* to
-   choose — scope, a product rule, a policy, a value nobody has decided — is a **spec gap**,
-   and raising the effort level does not convert it into work. Send it back to the spec
-   (`/kerbe:start`) and freeze the plan without that task, or freeze with the task's answer
-   in hand. Escalating a product question to `deep` puts it in front of the one reader who
-   cannot ask anyone: a worker at 3am.
+   choose — scope, a product rule, a policy, a value nobody has decided — is an **open
+   decision**, and raising the effort level does not convert it into work. List it in the
+   draft, and freeze only with its ruling in hand. Escalating a product question to `deep`
+   puts it in front of the one reader who cannot ask anyone: a worker at 3am.
 7. **Command provenance** — every command quoted appears in the stack adapter's
    `commands.md`.
 8. **Dependency graph** — every task carries `**Depends:**`; every number names a task that

@@ -7,6 +7,13 @@ The optional second arg is the slice's design_required value: `true` additionall
 requires the header to record the design and at least one task to carry a
 `node=<id> measured=<date>` origin. Structure only — never judgment. Prints
 PASS/FAIL per check; exit 0 = all pass, 2 = usage/unreadable.
+
+A header `**Status:** draft` marks a plan that is not frozen yet: it must carry an
+`## Open decisions` section (before the first task) whose `### OD-n:` entries each name
+what they affect and a recommended answer, and every entry must be marked
+`OD-n (open)` in some task. That section is the one place the placeholder scan skips —
+it exists to hold what is not decided. `**Status:** frozen`, or no Status line at all
+(every plan written before the draft step existed), must carry neither.
 """
 import pathlib
 import re
@@ -36,6 +43,12 @@ DEPENDS = r"^\*\*Depends:\*\*\s*(none|\d+(?:\s*,\s*\d+)*)\s*$"
 # A case's level decides what infrastructure proves it, so it is a planning decision.
 LEVELS = ("unit", "kernel", "http", "browser")
 STATUS_OK = 0
+# Draft/freeze: the header status, the section a draft keeps its open questions in, the
+# entries inside it, and the marker a task carries while its answer is still owed.
+PLAN_STATUS = r"^\*\*Status:\*\*\s*(\S+)\s*$"
+OPEN_SECTION = r"^## Open decisions\s*$(.*?)(?=^## |^### Task \d+[:.]|\Z)"
+OD_ENTRY = r"^### (OD-\d+):(.*?)(?=^### |\Z)"
+OD_OPEN = r"\b(OD-\d+) \(open\)"
 
 
 def case_levels(body):
@@ -171,8 +184,38 @@ def main(argv):
         check("no unscoped staging (%s)" % pat.replace("\\b", "").replace("\\", ""),
               not re.search(pat, text))
 
+    status_line = re.search(PLAN_STATUS, text, re.M)
+    status = status_line.group(1).lower() if status_line else "frozen"
+    if status_line:
+        check("Status is draft or frozen", status in ("draft", "frozen"),
+              status_line.group(1))
+    section = re.search(OPEN_SECTION, text, re.M | re.S)
+    cited = set(re.findall(OD_OPEN, "".join(tasks)))
+    if status == "draft":
+        entries = re.findall(OD_ENTRY, section.group(1), re.M | re.S) if section else []
+        listed = [od for od, _ in entries]
+        check("draft lists its open decisions", bool(entries),
+              "a draft with nothing open is frozen — set **Status:** frozen")
+        for od, body in entries:
+            check(od + " carries Affects", bool(re.search(r"^\*\*Affects:\*\*\s*\S", body, re.M)),
+                  "**Affects:** the tasks whose bodies the answer changes")
+            check(od + " carries Recommended",
+                  bool(re.search(r"^\*\*Recommended:\*\*\s*\S", body, re.M)),
+                  "**Recommended:** the answer you would pick, and why")
+            check(od + " is marked open in a task", od in cited,
+                  "the freeze folds the answer in where a task says '%s (open)'" % od)
+        check("OD ids are unique", len(listed) == len(set(listed)), str(listed))
+        check("every open OD a task cites is listed", cited <= set(listed),
+              "not in ## Open decisions: " + str(sorted(cited - set(listed))))
+    else:
+        check("frozen plan has no Open decisions section", not section,
+              "fold the answers into the tasks, then delete the section")
+        check("frozen plan marks no decision open", not cited, str(sorted(cited)))
+
+    # The draft's open-decision section is where undecided things are supposed to be.
+    scanned = text if status != "draft" or not section else text.replace(section.group(0), "")
     for pat in PLACEHOLDERS:
-        hits = re.findall(pat, text, re.I)
+        hits = re.findall(pat, scanned, re.I)
         check("no placeholder %r" % pat.replace("\\b", ""), not hits, str(hits[:3]))
 
     counts = re.findall(ASSERTION_COUNT, text)

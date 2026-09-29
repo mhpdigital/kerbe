@@ -1,5 +1,5 @@
 interface:
   display_name: "Kerbe: Plan"
-  short_description: "Create a TDD plan from a settled slice"
+  short_description: "Draft a slice's TDD plan, then freeze it after grilling"
 policy:
   allow_implicit_invocation: false

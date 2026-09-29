@@ -235,5 +235,100 @@ class LevelTest(unittest.TestCase):
             self.assertEqual(code, 0, level + ": " + out)
 
 
+DRAFT = GOOD.replace(
+    "**Design:** design_required: true — figma 05eb, page Cards, measured 2026-08-20\n",
+    "**Design:** design_required: true — figma 05eb, page Cards, measured 2026-08-20\n"
+    "**Status:** draft\n",
+).replace(
+    "### Task 1: Card index route",
+    """## Open decisions
+
+### OD-1: Do archived cards appear in the index?
+**Affects:** Task 1
+**Options:** hide them; show them greyed out
+**Recommended:** hide them — the index is for current material, and REQ-CARD-001 says "current".
+
+### Task 1: Card index route""",
+).replace(
+    "**Design:** node=213:2224 measured=2026-08-20",
+    "**Design:** node=213:2224 measured=2026-08-20\n**Decisions:** OD-1 (open) — which cards the index lists",
+)
+
+
+class DraftTest(unittest.TestCase):
+    def test_draft_with_open_decisions_passes(self):
+        code, out = run(DRAFT, "true")
+        self.assertEqual(code, 0, out)
+        self.assertIn("ALL PASS", out)
+
+    def test_status_value_must_be_draft_or_frozen(self):
+        code, out = run(DRAFT.replace("**Status:** draft", "**Status:** wip"), "true")
+        self.assertEqual(code, 1)
+        self.assertIn("Status is draft or frozen", out)
+
+    def test_draft_without_open_decisions_fails(self):
+        no_ods = DRAFT.split("## Open decisions")[0] + "### Task 1" + DRAFT.split("### Task 1", 1)[1]
+        code, out = run(no_ods.replace(" OD-1 (open)", " worker's call"), "true")
+        self.assertEqual(code, 1)
+        self.assertIn("draft lists its open decisions", out)
+
+    def test_open_decision_needs_recommendation(self):
+        code, out = run(DRAFT.replace("**Recommended:**", "**Leaning:**"), "true")
+        self.assertEqual(code, 1)
+        self.assertIn("OD-1 carries Recommended", out)
+
+    def test_open_decision_needs_affects(self):
+        code, out = run(DRAFT.replace("**Affects:** Task 1\n", ""), "true")
+        self.assertEqual(code, 1)
+        self.assertIn("OD-1 carries Affects", out)
+
+    def test_open_decision_must_be_referenced_by_a_task(self):
+        code, out = run(DRAFT.replace("OD-1 (open) — which", "worker's call — which"), "true")
+        self.assertEqual(code, 1)
+        self.assertIn("OD-1 is marked open in a task", out)
+
+    def test_task_cannot_cite_an_unlisted_open_decision(self):
+        code, out = run(DRAFT.replace("**Depends:** 1\n", "**Depends:** 1\n**Decisions:** OD-7 (open) — x\n"),
+                        "true")
+        self.assertEqual(code, 1)
+        self.assertIn("every open OD a task cites is listed", out)
+
+    def test_open_decisions_section_is_exempt_from_placeholder_scan(self):
+        code, out = run(DRAFT.replace("**Options:** hide them;",
+                                      "**Options:** to be decided between hide them;"), "true")
+        self.assertEqual(code, 0, out)
+
+    def test_placeholders_in_tasks_still_fail_in_a_draft(self):
+        code, out = run(DRAFT.replace("**Step 3: Minimal implementation**",
+                                      "**Step 3: TBD**"), "true")
+        self.assertEqual(code, 1)
+        self.assertIn("no placeholder", out)
+
+
+class FrozenTest(unittest.TestCase):
+    def test_explicit_frozen_status_passes(self):
+        code, out = run(GOOD.replace("**Spec:**", "**Status:** frozen\n**Spec:**"), "true")
+        self.assertEqual(code, 0, out)
+
+    def test_frozen_plan_cannot_keep_open_decisions_section(self):
+        code, out = run(DRAFT.replace("**Status:** draft", "**Status:** frozen"), "true")
+        self.assertEqual(code, 1)
+        self.assertIn("frozen plan has no Open decisions section", out)
+
+    def test_legacy_plan_without_status_cannot_cite_open_decision(self):
+        bad = GOOD.replace("**Design:** node=213:2224 measured=2026-08-20",
+                           "**Design:** node=213:2224 measured=2026-08-20\n**Decisions:** OD-1 (open) — x")
+        code, out = run(bad, "true")
+        self.assertEqual(code, 1)
+        self.assertIn("frozen plan marks no decision open", out)
+
+    def test_frozen_plan_may_cite_a_settled_od_id(self):
+        ok = GOOD.replace("**Design:** node=213:2224 measured=2026-08-20",
+                          "**Design:** node=213:2224 measured=2026-08-20\n"
+                          "**Decisions:** DECISIONS.md OD-1 — archived cards are hidden")
+        code, out = run(ok, "true")
+        self.assertEqual(code, 0, out)
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -45,7 +45,10 @@ stylesheet, class mismatch — **is** in scope: that is how a feature ships as a
 2. Resolve the slice folder (`{planning_root}/{slice}`), the design adapter
    (`adapters/design/{name}.md`) and stack adapter (`adapters/stack/{name}/verify.md`).
 3. Mode: obey the user if stated; else probe `stack.code_roots` for the slice's artifacts —
-   substantially none ⇒ `pre-impl`, else `audit`.
+   substantially none ⇒ `pre-impl`, else `audit`. A `PLAN.md` still marked
+   `**Status:** draft` ⇒ **stop**: a draft's tasks will be rewritten by the freeze, so a
+   ledger measured against it measures a plan that is about to move. Freeze it first
+   (`/kerbe:grill`, then `/kerbe:plan`).
 4. If `kerbe.constraints` is set — plus `kerbe.constraints_by_skill.coverage` when
    present — append those lines verbatim to every extractor and verifier prompt you
    dispatch. Constraints bound what agents may do to the environment

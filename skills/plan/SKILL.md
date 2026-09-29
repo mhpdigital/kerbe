@@ -1,16 +1,30 @@
 ---
 name: plan
 description: >-
-  Use when a slice's spec docs are settled and the next step is a task-by-task TDD
-  implementation plan — the step between specifying a slice and building it. Produces the
-  slice's frozen PLAN.md, or a remediation plan for a fix list from a coverage run.
+  Use when a slice's spec docs and design are in place and the next step is a task-by-task
+  TDD implementation plan. Runs twice: first it drafts PLAN.md and lists the decisions the
+  draft surfaced for /kerbe:grill; after grilling it freezes the plan with the answers
+  folded in. Also writes a remediation plan for a fix list from a coverage run.
 ---
 
-# kerbe:plan — freeze the task list
+# kerbe:plan — draft the task list, then freeze it
 
-Turns a slice's settled spec docs into `PLAN.md`: **frozen instructions — the HOW, with
-code**, one task per independently testable deliverable. Everything project-specific
-resolves through `kerbe.yml` (`{plugin}/skills/coverage/references/config.md`).
+Turns a slice's spec docs into `PLAN.md`: **frozen instructions — the HOW, with code**, one
+task per independently testable deliverable. Everything project-specific resolves through
+`kerbe.yml` (`{plugin}/skills/coverage/references/config.md`).
+
+**Drafting and freezing are two runs, with `/kerbe:grill` between them.** Writing the tasks
+is what surfaces most of a slice's real decisions — which table a task writes, what a case
+asserts, which of two routes a seam uses — and a spec read on its own cannot see them. So
+the first run writes the whole plan but **does not settle a decision a human owns**: it
+lists it, with a recommended answer, and stops. Grilling then puts those questions to the
+person who owns them, and the second run freezes the plan with the answers folded into the
+task bodies. Freezing first would lock guesses in and turn every later answer into an
+amendment; grilling first has only the thin spec to ask about.
+
+```
+kerbe:figma → kerbe:plan (draft) → kerbe:grill → kerbe:plan (freeze) → kerbe:coverage pre-impl
+```
 
 `PLAN.md` is not a tracker. The live tracker (`claude-progress.md`) is derived from it by
 `/kerbe:implement`, at the workspace, with its own lifecycle. Never merge the two: a plan
@@ -25,16 +39,19 @@ denominator.
    branch, else ask. One slice per run.
 3. Resolve the stack adapter (`adapters/stack/{name}/commands.md` for every verification
    command the plan will quote) and the design adapter.
-4. **Mode — computed from the slice, never a flag and never a question:**
-   - **no `PLAN.md` in the slice folder ⇒ build mode.** Steps 1–6 below.
-   - **`PLAN.md` exists ⇒ remediation mode.** A frozen plan is not rewritten, so the only
-     legal output is `FIX_PLAN.md`. See the mode section at the end. Remediation is for
+4. **Mode — computed from the slice, never a flag and never a question.** Read the plan
+   header's `**Status:**` line:
+   - **no `PLAN.md` in the slice folder ⇒ draft mode.** Steps 1–6 below.
+   - **`PLAN.md` with `**Status:** draft` ⇒ freeze mode.** See the Freeze mode section.
+   - **`PLAN.md` with `**Status:** frozen`, or with no Status line (a plan written before
+     the draft step existed) ⇒ remediation mode.** A frozen plan is not rewritten, so the
+     only legal output is `FIX_PLAN.md`. See the mode section at the end. Remediation is for
      **ledger rows**: a decision out of `/kerbe:grill` has no ledger id and never arrives
      here — that skill appends it to the same `PLAN.md` as a dated amendment section
      (its Step 6), per the amendment rule in Rules below.
-   - The user overrides both by saying so ("re-plan from scratch, the scope changed") — and
-     then say what it costs before writing: a replaced `PLAN.md` invalidates the ledger's
-     plan hop and needs a fresh coverage extraction to mean anything again.
+   - The user overrides all three by saying so ("re-plan from scratch, the scope changed") —
+     and then say what it costs before writing: a replaced frozen `PLAN.md` invalidates the
+     ledger's plan hop and needs a fresh coverage extraction to mean anything again.
 
    State the mode, and the evidence for it, in one line before you start.
 
@@ -43,11 +60,13 @@ adapters or precedents for the plan) run at effort `standard` — pass `model: s
 explicitly. Reading is not where the plan's judgement lives; an unset model inherits the
 session's, which under Night Shift routing is the costliest tier for a read-only pass.
 
-## Step 1 — the spec must be settled
+## Step 1 — the spec must exist
 
-The slice's spec docs exist and their open questions are resolved. If the doc set is
-missing, run `/kerbe:start` first; if questions are open, settle them first. A plan written
-on an unsettled spec churns, and it churns after it has been frozen and handed to workers.
+The slice's spec docs exist. If the doc set is missing, run `/kerbe:start` first. Open
+questions in those docs do **not** stop a draft: they become entries in its
+`## Open decisions` section (Step 3), alongside the ones the tasks surface, so grilling
+gets them all in one round. What stops a draft is a spec too thin to task at all — no
+requirement a task could cite — and that goes back to `/kerbe:start`.
 
 ## Step 2 — the design gate (blocking)
 
@@ -102,6 +121,30 @@ skill dependency**.
   action chains and HTTP-observable state transitions each need a real request, and a
   client-side claim needs a browser.
 
+**Separate what you can find out from what someone has to choose.** A question the codebase
+or the spec docs answer — which repository owns a lookup, which existing pattern fits, what
+a column is called — you answer by reading, and write the answer in. A question a person has
+to choose — scope, a product rule, a policy, a limit, a route shape, a value nobody has set
+— you do **not** answer, however obvious your pick looks. Write it as an open decision:
+
+- in the plan header, `**Status:** draft`
+- an `## Open decisions` section **before the first task**, one entry per decision:
+
+  ```markdown
+  ### OD-1: {the question, one line}
+  **Affects:** Task 2, Task 4
+  **Options:** {the real alternatives, each with its cost}
+  **Recommended:** {your pick} — {why, citing the spec, the code or a sibling slice}
+  ```
+
+- in every task the answer changes, a `**Decisions:**` line `OD-1 (open) — {what it
+  decides here}`, and the task body written for the recommended answer. The freeze then
+  only has to change the tasks whose answer differed.
+
+A recommendation is not a decision. The draft is where a planner is *allowed* to be unsure,
+and saying so is the job: an open decision left out of the section is one grilling never
+asks, and the freeze reads it as settled.
+
 **Decide each task's effort level as you write it**, and let it set how much code the task
 carries: `low` is a typist and gets the code in full; `standard` and `deep` get seams, cases
 and deciding fragments, never bodies. A plan of pasted implementations is not a safer plan —
@@ -137,40 +180,55 @@ here, with exact values:
   (the workers building this plan inherit them), verbatim
 - version floors, naming and copy rules, and platform requirements from the spec docs
 
-## Step 5 — self-review, then freeze
+## Step 5 — self-review, then draft or freeze
 
 Run the self-review in `references/plan-spec.md` (spec coverage, placeholder scan, seam
 consistency, effort and code boundary, open decisions, command provenance), then the
 structural check:
 
 ```bash
-python3 {plugin}/fixtures/check_plan.py {planning_root}/{slice}/PLAN.md
+python3 {plugin}/fixtures/check_plan.py {planning_root}/{slice}/PLAN.md {design_required}
 ```
+
+Fix what it reports; it checks structure, not judgment. Then branch on what the draft left
+open:
+
+- **One or more open decisions ⇒ leave it a draft.** `**Status:** draft`, the section
+  filled. Do not freeze.
+- **Nothing open ⇒ freeze now, in this run.** Set `**Status:** frozen`, remove the empty
+  section, re-run the check. There is nothing for a grill round to ask, and a second run to
+  flip one line is ceremony.
 
 **Freezing is what closes the decisions.** A plan is frozen so workers can be dispatched
 against it, including into unattended runs where nobody is awake to answer a question. So an
-unresolved decision does not freeze: settle it now, or raise the task to `deep` and write in
-its `Decisions` block what that worker is to settle and report. "The implementer can decide"
-is a plan that has moved a planning question into a night session — the one place it cannot
-be asked.
+unresolved decision does not freeze: it is an open decision in the draft, or — only when the
+codebase answers it — a `deep` task whose `Decisions` block says what the worker is to settle
+and report. "The implementer can decide" is a plan that has moved a planning question into a
+night session — the one place it cannot be asked.
 
 **The `deep` route is only for questions the codebase answers.** A question that needs a
-person to choose — scope, a product rule, a policy, a value nobody has set — is a spec gap,
-and no effort level converts it into work. Send it back through `/kerbe:start`, and freeze
-the rest.
+person to choose — scope, a product rule, a policy, a value nobody has set — is an open
+decision, and no effort level converts it into work.
 
-Fix what it reports; it checks structure, not judgment. Commit the plan **in the planning
-repo, scoped by pathspec** — `git -C {planning_repo} commit -m "..." -- <slices>/{slice}/PLAN.md`
+Commit the plan **in the planning repo, scoped by pathspec** —
+`git -C {planning_repo} commit -m "..." -- <slices>/{slice}/PLAN.md`
 (`{planning_repo}` = `git -C {planning_root} rev-parse --show-toplevel`, paths relative to
 it; see `config.md` → `planning_root`) — because the git index is shared across concurrent
 sessions and a bare commit sweeps up another session's staged work.
 
-Stamp `TIMING.md`'s plan row with `TZ='{kerbe.timezone}' date '+%Y-%m-%d %H:%M'` —
-timestamp only, no effort estimate.
+Stamp `TIMING.md` — timestamp only, no effort estimate, from
+`TZ='{kerbe.timezone}' date '+%Y-%m-%d %H:%M'`: the "Plan draft" row for a draft; both the
+"Plan draft" and "Plan impl." rows when this run froze it.
 
 ## Step 6 — hand off
 
-State both next steps explicitly:
+**Left as a draft** ⇒ list every open decision in the final message — id, question,
+recommended answer — and name the one next step: `/kerbe:grill {slice}`, which takes the
+draft's open decisions as its first round. Then `/kerbe:plan {slice}` again to freeze. **Do
+not answer them yourself**, and do not treat a recommendation nobody objected to as a ruling:
+running unattended, stop here and say a person is needed.
+
+**Frozen** ⇒ state both next steps explicitly:
 
 1. `/kerbe:coverage {slice}` in **pre-impl** mode — does the plan task everything the design
    and spec promise? This is the cheapest moment to find a dropped promise: before anyone
@@ -178,10 +236,47 @@ State both next steps explicitly:
 2. `/kerbe:implement {slice}` — derives `claude-progress.md` from this plan and dispatches
    the work.
 
+## Freeze mode — fold the answers in
+
+Entered automatically when `PLAN.md` carries `**Status:** draft` (Setup step 4). The draft
+is not frozen yet, so its task bodies may be edited — that is the whole point of drafting
+first: every answer lands in the task it changes, not in an amendment beside it.
+
+1. **Every open decision needs a recorded answer.** For each `OD-n` in the draft's section,
+   find its ruling in `{planning_root}/{slice}/DECISIONS.md` — `/kerbe:grill` records it
+   under that same id. Any `OD-n` without one ⇒ **STOP**: name the unanswered ids, hand off
+   to `/kerbe:grill {slice}`, change nothing. Never fill one in from its `**Recommended:**`
+   line: a recommendation nobody ruled on is exactly the inferred decision this split
+   exists to prevent.
+2. **Fold each answer in.** In every task carrying `OD-n (open)`, replace the marker with
+   the citation (`DECISIONS.md OD-n — {the ruling}`), and where the ruling differs from the
+   recommendation the task was written for, rewrite what it changes — files, interfaces,
+   cases, steps, `Depends`. A ruling that adds or drops a deliverable adds or drops a task.
+   Decisions grilling settled beyond the listed ones (a new `Q` id) are folded in the same
+   way, wherever they bite.
+
+   Two things the fold may turn up, and neither is yours to settle:
+   - **A ruling adds UI the Design-sources block does not measure** ⇒ **STOP** before
+     writing that task: run `/kerbe:figma` (or the adapter's extraction) for the new leaf.
+     Never write a node id, a size or a `measured=` date yourself — a measurement the
+     planner typed is the cached guess Step 2 exists to refuse.
+   - **Applying a ruling raises a question it does not answer** (the ruling says "filter by
+     category"; the design's chips are not categories) ⇒ **do not freeze.** Add it to
+     `## Open decisions` as the next `OD-n`, with options and a recommendation, mark the
+     task `OD-n (open)`, keep `**Status:** draft`, and hand back to `/kerbe:grill`. Picking
+     the reading that makes the ruling "hold" is minting a decision.
+3. **Re-run the self-review over the tasks that moved** — seam consistency and the
+   dependency graph above all, since a changed route or seam ripples into its consumers.
+4. **Freeze.** Delete the `## Open decisions` section, set `**Status:** frozen`, and run
+   `check_plan.py` again; it fails a frozen plan that still marks anything open. Commit
+   scoped by pathspec, stamp "Plan impl." in `TIMING.md`, and hand off as Step 6 does for a
+   frozen plan.
+
 ## Remediation mode — planning fixes, not features
 
-Entered automatically when the slice already has a frozen `PLAN.md` (Setup step 4). The
-authoring rules are unchanged; what differs is the source, the scope and the exit.
+Entered automatically when the slice already has a frozen `PLAN.md` (Setup step 4 —
+`**Status:** frozen`, or no Status line). The authoring rules are unchanged; what differs is
+the source, the scope and the exit.
 
 **Source — resolved, not asked.** The open rows of the frozen ledger are the work list
 (`{plugin}/skills/coverage/scripts/verdict.py` prints them). When a fix list sits beside the
@@ -219,7 +314,9 @@ Then, four changes to the authoring rules:
 
 ## When NOT to use
 
-- Spec docs incomplete or questions open ⇒ `/kerbe:start` and specify first
+- Spec docs missing ⇒ `/kerbe:start` first (open questions in them are fine — the draft
+  lists them)
+- A draft is waiting on its open decisions ⇒ `/kerbe:grill`, then this skill again
 - `SETTINGS.md` missing or `design_required` unanswered ⇒ `/kerbe:start`
 - `design_required: true` and the Design-sources block is empty or stale ⇒ `/kerbe:figma`
   (or `dc_extract.py` under the `claude-design` adapter)
@@ -228,6 +325,11 @@ Then, four changes to the authoring rules:
 
 ## Rules
 
+- The planner lists decisions; it does not make them. A choice a person owns goes in the
+  draft's `## Open decisions` with a recommendation, never into a task as if settled — and
+  the freeze folds in only rulings `DECISIONS.md` records.
+- A draft's tasks may be rewritten; a frozen plan's may not. `**Status:**` is what says
+  which one a file is.
 - A frozen plan is amended by **writing a dated amendment section at its end**, never by
   editing a task a worker may already have read. New work in an amendment is a new task,
   numbered on from the last and authored to `references/plan-spec.md` like any other;

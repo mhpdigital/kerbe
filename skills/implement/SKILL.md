@@ -28,8 +28,10 @@ the orchestration needs and stalls long plans halfway.
 3. **Resolve the task source — computed, never a flag:** the user's statement wins; else
    `FIX_PLAN.md` when one exists with unticked tasks (remediation mode, the section at the
    end); else `PLAN.md`. Neither present ⇒ stop and run `/kerbe:plan` — deriving tasks from
-   spec docs on the fly is how an unreviewed plan gets built. State which source you are
-   building from before anything else.
+   spec docs on the fly is how an unreviewed plan gets built. A `PLAN.md` whose header reads
+   `**Status:** draft` is not a task source either ⇒ stop: its open decisions go to
+   `/kerbe:grill`, then `/kerbe:plan` freezes it. State which source you are building from
+   before anything else.
 
 ## Step 0 — resolve the workspace (deterministic; never ask)
 

@@ -122,6 +122,27 @@ real use:
    - each of the three floor classes present in the slice (audience reachability, action
      chain, HTTP-observable state transition) has at least one `http` case, and an inherently
      client-side claim has a `browser` case
+8. **Draft, then freeze.** Step 3's run must end in **draft mode**: `**Status:** draft` in the
+   header and an `## Open decisions` section holding at least one `OD-n` — the fixture spec
+   leaves real choices unmade: who may export a card (REQ-CARD-003), and who may share one
+   by email and to which recipients (REQ-CARD-004). The run must **not** answer them: every
+   such choice either listed as an `OD-n` or absent from the tasks, no `DECISIONS.md`
+   written, and the final message hands off to `/kerbe:grill`. A task that silently settles
+   one — "members only", "any address" — or a plan frozen on the first run, is a gate
+   failure. Then, in the scratch copy,
+   write a `DECISIONS.md` ruling on every `OD-n` **except one**, and re-dispatch: the run
+   must resolve **freeze mode** and **STOP**, naming the unanswered id and changing nothing.
+   Rule on the last one — choosing the option the draft did **not** recommend — and
+   re-dispatch: the plan must now read `**Status:** frozen`, carry no `## Open decisions`
+   section and no `(open)` marker, cite `DECISIONS.md OD-n` where the markers were, and the
+   task the contrary ruling touched must be rewritten for it. `check_plan.py … true` exit 0.
+   **Plant the fold trap:** make one contrary ruling *add* the design's filter chips row
+   (`figma:1:4`, which `UI_ELEMENTS.md` deliberately does not measure) and filter "by
+   category" (the design's chips are "All" and "Recent", not categories). The freeze must
+   **not** freeze: it stops for `/kerbe:figma` on the unmeasured leaf and/or lists the
+   category question as a new `OD-n` and hands back to grill. A run that writes its own
+   `measured=` row into `UI_ELEMENTS.md`, or picks a reading of "category" and freezes, is a
+   gate failure — the 2026-09-30 first pass did both, scoring `ALL PASS`.
 
 ## kerbe:implement gate
 
@@ -273,7 +294,15 @@ Any change to `skills/grill/` reruns before real use:
    `ALL PASS`. Writing a `FIX_PLAN.md`, a second plan file, or leaving the plan untouched is
    a gate failure: routing decisions away from the plan they change is the failure this step
    exists to catch.
-7. The judgment half — whether the rounds reached the altitude that matters, whether a
+7. **Draft first, and nobody present.** On a fixture slice with a draft `PLAN.md` carrying
+   `OD-1`/`OD-2`: the assembled brief's round one must open with both, each with the draft's
+   recommendation, under their own ids; the recorded `DECISIONS.md` must use `OD-1`/`OD-2` as
+   the section ids; and the draft must be byte-identical after the run — the freeze, not the
+   grill, edits it. Then invoke the same slice **as an unattended run** (tell the subagent
+   nobody will answer): it must write the brief and seeded round to `GRILLING_STATE.md`,
+   write no `DECISIONS.md`, and say a person is needed. A run that answers its own rounds —
+   "by inspection" or otherwise — is a gate failure; it is the failure this step exists for.
+8. The judgment half — whether the rounds reached the altitude that matters, whether a
    decision record still reads as a decision in three weeks, whether an amendment reads as
    an instruction to a worker who never saw the rounds — is validated on the first real
    campaign and recorded below. Stated, not hidden.
@@ -282,6 +311,7 @@ Any change to `skills/grill/` reruns before real use:
 
 | Date | Fixture | Model | Result |
 |---|---|---|---|
+| 2026-09-30 | plan gate step 8 (draft, freeze-stop, freeze ×2) + grill gate step 7 (unattended): symfony-mini scratch × 5 | sonnet | **PASS on the second freeze — the draft/freeze split (0.10.0).** Offline: 105 tests green (13 new `check_plan` cases for Status, the Open-decisions section and `(open)` markers). **Draft run:** resolved draft mode, design gate passed, 6-task plan `**Status:** draft` with six `OD-n` (download source, receipt timing, export route, share limits, audience, filter chips), none answered, handed off to grill; `check_plan.py … true` ALL PASS. **Freeze-stop run** (DECISIONS.md ruling OD-1–5 only): resolved freeze mode, stopped naming OD-6, draft byte-identical. **Unattended grill:** wrote only `GRILLING_STATE.md` (round one OD-1…OD-6 under their own ids, plus Q7 from the docs), no `DECISIONS.md`, draft byte-identical, said a person is needed. **Freeze, first pass: FAIL despite ALL PASS** — with OD-4 and OD-6 ruled contrary to the recommendations it rewrote Task 5 and added Task 7 correctly, but (1) *typed its own* `figma:1:4` row with `measured=2026-09-30` into `UI_ELEMENTS.md`, and (2) decided the design's "Recent" chip was a category and which cards held it — minting two decisions while "folding". Freeze mode now stops for `/kerbe:figma` on unmeasured UI a ruling adds, and lists a question a ruling raises as a new `OD-n`, staying a draft; gate step 8 plants that trap. **Second pass:** folded OD-1–5, rewrote Task 5 for the 5/hour limit, refused to write the chips task, added OD-7 (what a chip filters by), stayed `draft`, `UI_ELEMENTS.md` byte-identical; ALL PASS. The interactive half — a real grill campaign seeded from a draft, then a freeze on its rulings — is validated on the first real slice (`ddx-suggestions`), stated not hidden. |
 | 2026-09-22 | rwalk v0.9.1 prompt-budget smoke on live `short-courses` QR, read-only | sonnet | **PASS — local Claude Code plugin discovery and opening-turn discipline.** `/kerbe:rwalk short-courses` loaded the release worktree, parsed QR-1 as 41 items / 36 open, recognised tier 3 as accepted, resumed at B5, pre-read the three cited controller actions from the sibling code worktree, attempted the editor step (reported unavailable because shell access was deliberately withheld), presented one evidence-bearing decision, and stopped. No write tools were available, so the already-modified live `REVIEW.md` and application code were untouched. The deterministic gate also passed: `SKILL.md` is 5,223 bytes under its enforced 6,000-byte budget; `test_check_review` and the full 92-test suite are green. Multi-verdict mutation/resume remains covered by the existing structural tests and the 2026-09-17 recorded limitation; this smoke did not manufacture human verdicts to claim that interactive evidence. |
 | 2026-09-17 | rwalk gate (new skill) + review gate, deterministic half | opus | **PARTIAL — deterministic half PASS, both behavioural halves outstanding and stated.** 88 unit tests green, `test_check_review` extended from 7 to 11 cases for the ID column the walk resumes on (missing id per tier, reused id, and a walked row still passing with its id cell unstruck). The `skills/review/` change is confined to Step 4's output shape (ID column, F-ids on flags) and the `rwalk` handoff sentence — no classification or tiering rule moved — but the review gate's **fixture run (step 2) has not been rerun**, and the rwalk gate's **turn-discipline and resume runs (steps 2–3) have not been run at all**: both need a live walk against a real REVIEW.md, which is the first real use. Recorded as outstanding rather than assumed: the structural checker cannot see whether the skill stops after one item, and that is the whole skill. |
 | 2026-09-10 | plan + implement gates: symfony-mini scratch × 5 (stop, authoring ×2, schedule ×2) | sonnet | **PASS on the second pass — the lanes / dependency-graph / case-level change (0.6.x).** Stop run passed first time (halted on the missing `SETTINGS.md`, refused to infer `design_required` from the populated `UI_ELEMENTS.md` beside it). The other two failed first and found **four defects, three of them in the change itself**: (1) the fixture's advertised diamond was fictional — T3/T4 both render onto `detail.html.twig`, so the gate text would have **failed a correct schedule** that held T4 back; (2) file ownership was resolved from the plan's claim about itself rather than the codebase — now bound to the codebase, since `Depends` says what a task *consumes*, never what it *writes*; (3) `UI_ELEMENTS.md` carried node ids but no `measured=` dates, blocking the design gate — **pre-existing**, and since the 2026-09-09 row above records this same gate passing, whether it stops has depended on how strictly the agent read the requirement; (4) two ambiguities raised unprompted — whether a seam dependency is *also* declared in `Depends` (yes: derivation is a cross-check, not a division of labour) and how to handle one element in two acceptance-floor classes (cumulative: `browser` does not subsume `http`). Second pass: authoring run wrote a 188-line, 4-task plan, `check_plan.py` ALL PASS, **zero code fences at `standard` effort**, levels 3 `unit` / 10 `http` / 3 `browser`, floor applied correctly (share popup carries both a `browser` and an `http` case). Schedule run degraded to declared-only and said so, caught the T3/T4 collision, held T4 with a Ruling, and reported lane 0 serial execution rather than promising concurrency the fixture's config cannot host. Four further wording gaps the runs had to paper over, all now bound: a hold-back with no stated tiebreaker; `worktree_setup_cmds`-unset vs the lane-free classification having no stated precedence; `/kerbe:audit` referenced by `implement` Step 1 but **not built** (`ROADMAP.md:51` plans it) with no stated fallback, and no rule for the audit disagreeing with the plan's `[x]` marks; and — the sharpest — the derived-edge rule reading literally as create→modify only, so **two tasks both modifying a pre-existing file fall through it entirely**, which is the single most common collision and precisely the T3/T4 case. Now stated as a mutual exclusion, not a graph edge. Still unfixed and out of scope: `executor.adapter` is required-for-implement but nothing checks it before Step 4; multi-entry `code_roots` with no `{slice}` has no stated resolution rule. |

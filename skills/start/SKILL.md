@@ -80,7 +80,9 @@ status. Nothing is created.
 ## Lifecycle stage transitions
 
 When asked to advance a slice's stage: update `INDEX.md`. Statuses:
-`planning → scoped → ready → in-progress → in-review → done | dropped | parked`.
+`planning → scoped → drafted → ready → in-progress → in-review → done | dropped | parked`.
+`drafted` means `PLAN.md` exists as a draft (`**Status:** draft`) and its open decisions wait
+on `/kerbe:grill`; `ready` means the plan is frozen and pre-impl coverage is clean.
 Advancing to `in-progress` ⇒ remind the user to run `/kerbe:audit` first to generate the
 progress ledger with verification questions, reviewed by the user before agents implement.
 

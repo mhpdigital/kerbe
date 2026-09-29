@@ -54,17 +54,27 @@ against the spec, fill the Design-sources block `kerbe:plan` blocks on).
 
 ### `kerbe:grill`
 
-The Specify step, between the design leg and the freeze. Wraps the grilling skill: assembles
-the brief that points it at the slice's own docs with their authority annotated, the parent
-entries that bind this slice, and the dependency state — paths, never pasted contents — then
-runs the rounds and lands the result in `DECISIONS.md`, each ruling cited back to the question
-that settled it. Exists because `kerbe:plan` demands a spec whose open questions are resolved,
-and a plan frozen over a silent assumption churns after it has been handed to workers.
+The Specify step, between the plan draft and the freeze. Wraps the grilling skill: assembles
+the brief that points it at the draft's open decisions and the slice's own docs with their
+authority annotated, the parent entries that bind this slice, and the dependency state —
+paths, never pasted contents — then runs the rounds and lands the result in `DECISIONS.md`,
+each ruling cited back to the question that settled it. It needs a person to answer: run
+unattended, it writes the brief and stops rather than answering its own rounds.
 
 ### `kerbe:plan`
 
-Freezes the slice's task list as `PLAN.md` — the HOW, with code, one task per independently
-testable deliverable. Blocking design gate before the freeze: an unanswered
+Runs twice. The **draft** writes every task but lists the decisions a person owns — the ones
+writing the tasks turned up, plus the spec's own — as `OD-n` entries with a recommended
+answer, instead of settling them. `kerbe:grill` asks them. The **freeze** folds each ruling
+into the task it changes and marks the plan frozen:
+
+```
+kerbe:figma → kerbe:plan (draft) → kerbe:grill → kerbe:plan (freeze) → kerbe:coverage pre-impl
+```
+
+A draft with nothing open freezes in the same run. The frozen `PLAN.md` is the HOW, with
+code, one task per independently testable deliverable. Blocking design gate before the
+draft: an unanswered
 `design_required`, an unfilled Design-sources block, or a design measured before its last
 modification each stop the run rather than resolving quietly. Plan authoring is specified
 in-repo (`skills/plan/references/plan-spec.md`), so the lifecycle has **no external skill
