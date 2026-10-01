@@ -14,7 +14,7 @@ REPO = pathlib.Path(__file__).resolve().parents[1]
 SKILLS = REPO / "skills"
 STACKS = REPO / "adapters" / "stack"
 EXECUTORS = REPO / "adapters" / "executor"
-PLUGIN_VERSION = "0.10.0"
+PLUGIN_VERSION = "0.10.1"
 
 # Main skill prompts are injected before supporting references are read. Keep explicit
 # budgets for skills whose prompt size is a compatibility invariant.

@@ -151,13 +151,12 @@ and deciding fragments, never bodies. A plan of pasted implementations is not a 
 it is a plan whose every body was written against a codebase that does not exist yet, and
 whose reviewer stops reading. The plan-spec's Effort and seam-rule sections are the authority.
 
-*If `superpowers:writing-plans` is installed you may use it to author instead* — it covers
-the same ground — but apply the two overrides below and the kerbe-specific additions from
-`references/plan-spec.md` (Global Constraints content, effort levels, the seam rule, case
-tables, node ids, `@req` targets, adapter-sourced verification commands). Without it, nothing
-is missing.
+Author with `references/plan-spec.md` only. Do not delegate to another planning skill:
+`superpowers:writing-plans`, for one, requires full code in every step (against the seam
+rule), names its own executor in the plan header (competing with `/kerbe:implement`), and
+saves to a dated file in a docs directory.
 
-**The two overrides, always:**
+**Name and location, always:**
 
 1. **Name** — the plan is `PLAN.md`, never a date-stamped filename. A per-slice folder holds
    exactly one plan, and dumb orchestration must be able to locate it without searching.

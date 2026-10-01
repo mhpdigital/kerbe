@@ -78,8 +78,8 @@ draft: an unanswered
 `design_required`, an unfilled Design-sources block, or a design measured before its last
 modification each stop the run rather than resolving quietly. Plan authoring is specified
 in-repo (`skills/plan/references/plan-spec.md`), so the lifecycle has **no external skill
-dependency**; `superpowers:writing-plans` is used when installed, under the same two
-overrides (fixed name, slice-folder location).
+dependency**. It does not delegate to `superpowers:writing-plans`, whose full-code steps,
+executor header and dated docs-folder output conflict with the seam rule and `kerbe:implement`.
 
 ### `kerbe:implement`
 
