@@ -60,6 +60,22 @@ Getting this wrong reads as a regression in both directions: run everything and 
 ChromeDriver looks like broken code; run the default and an e2e failure never surfaces at
 all. Name the suite, and say which one the evidence covers.
 
+## Running a suite
+
+A suite run takes minutes and owns the test database while it runs. Two rules:
+
+- **Write the output to a file, then read the file.** `php vendor/bin/phpunit --testsuite
+  '<name>' > /tmp/<label>.txt 2>&1`, and read it when the command returns. Never pipe a
+  suite through `tail` or `head`: `tail` holds everything until the run ends, so a live run
+  shows zero bytes and looks frozen. The usual next mistake is starting a second run.
+- **One suite at a time per test database.** Before starting one, confirm no `phpunit`
+  process is alive in that environment (`ps -eo pid,etime,args | grep '[p]hpunit'`). Killing
+  the client that started a run does not always kill the run itself, and two runs on one
+  test database corrupt each other's fixtures, so both results are void. A project can
+  enforce this instead of relying on the check: an fd-held `flock` at the front of
+  `kerbe.stack.exec` (`exec 9>/tmp/<lock> && flock -w 3600 9 && …`) makes a second caller
+  wait, covers a compound `{cmd}`, and releases when the shell exits.
+
 ## Which level a case runs at
 
 `PLAN.md` declares a level per case; this is what each one means here. The rule the planner
