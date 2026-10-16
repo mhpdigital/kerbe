@@ -123,8 +123,11 @@ rather than a cold read, opens the row in the editor, then strikes it in place w
 mechanism behind the verdict. Tier 2 goes five to a turn and tier 3 closes in one, because
 the tiering already decided where the attention belongs. State lives in the rows — a row
 is open until it carries an unstruck bold status — so resume is derivable and there is no
-ledger file to keep in sync. `ok` / `bug` / `defer` / `skip` / `back` / `stop`; anything
-else is discussion. The walk never edits application code.
+ledger file to keep in sync. `ok` / `fix` / `bug` / `defer` / `skip` / `back` / `stop`;
+anything else is discussion. The walk itself never edits application code: `fix` queues
+the ruled change, and when the walk ends every queued fix is built in one batch by
+`kerbe:implement` workers without asking again. The next `kerbe:review` records those
+commits as closed rows citing the ruling, so nobody walks their own fixes twice.
 
 ### Executors
 

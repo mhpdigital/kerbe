@@ -20,8 +20,9 @@ of what is not — run `/kerbe:coverage` first. Review findings are code defects
 missing promises: they route to `/kerbe:bug`, never into the coverage ledger.
 
 The QR this skill records is a queue of decisions a human still has to make. `/kerbe:rwalk`
-is what works that queue — one row per turn, struck in place as each resolves — which is
-why every row must carry its own id and its own open command.
+is what works that queue — one row per turn, struck in place as each resolves, with the
+ruled fixes built in one batch at the end — which is why every row must carry its own id
+and its own open command.
 
 ## Setup
 
@@ -159,6 +160,8 @@ on the first pass. It must check:
   assumption-backed ones to "needs verification".
 - **False positives** — each flag needs a concrete reachable failing scenario, or it drops.
 - **Severity** — defensible, not diplomatic.
+- **Ruled fixes** — each row recorded closed as a ruled fix matches its ruling, has its
+  test, and changes nothing the ruling did not cover. A mismatch reopens the row.
 
 Feed the critique back, revise, and loop until the critic surfaces nothing material.
 Record only the revised review; note in the QR that an adversarial pass ran.
@@ -182,6 +185,13 @@ and planning markdown): strike the **entire** original item with `~~…~~`, foll
 unstruck with a bold status (`**FIXED**` / `**RESOLVED**` / `**EXPECTED**` /
 `**FALSE POSITIVE**` / `**IMPROVED**` / `**REMOVED**`) plus the resolution, and leave it
 **in place** — never move items to a "done" section, never prefix with ✅.
+
+**Ruled fixes are not re-walked.** A change in the diff that a `**FIXED {sha}**` row of an
+earlier QR built (the review-fix batch after `/kerbe:rwalk`) is a decision the human has
+already made. Give it its normal row and id, but record it closed:
+`**FIXED (ruled QR-{m}/{id}) {sha}**`, with the regression test that proves it. The
+adversarial pass still checks it does what the ruling said and no more. Anything the
+commit changed beyond the ruling gets an open row like any other change.
 
 ## Step 7 — lifecycle and the review guide (first QR only)
 

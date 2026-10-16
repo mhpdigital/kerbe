@@ -58,9 +58,21 @@ row correct.
 
 Write the edit the moment the human resolves the row. Do not wait for the end of the walk.
 
+A `fix` verdict records the ruling, not a result. The change must be specific enough for a
+worker to build without asking: what to change and what behaviour proves it.
+
+```markdown
+| F2 | ~~{original cells}~~ **FIX QUEUED {date}** | Ruled: {the change} · proves it: {behaviour the test asserts} | ~~{open cmd}~~ |
+```
+
+For a flag paragraph, strike the paragraph and append the same status and ruling. The fix
+batch later replaces `FIX QUEUED` with `FIXED {sha}`, keeping the ruling.
+
 ## Route discoveries
 
-- Defect: invoke `kerbe:bug`, then record `**BUG-{id} RAISED**`.
+- Defect with a local fix: record `**FIX QUEUED**` with the ruling. The batch builds it.
+- Defect with blast radius (data model, shared guard, migration, data flow): invoke
+  `kerbe:bug`, then record `**BUG-{id} RAISED**`.
 - Intended-behaviour ruling: add it to the file's top-context `## Design decisions`.
 - Reviewer-facing concern or deferral: add it to the review guide's Known Issues and its
   Code Reviews Completed row.
@@ -79,5 +91,6 @@ an unrelated shared index cannot leak into the commit:
 git -C {planning_repo} commit -m "{slice}: rwalk QR-{n} — {ids} resolved" -- <slices>/{slice}/REVIEW.md [<slices>/{slice}/REVIEW_GUIDE.md]
 ```
 
-Report `{n} resolved · {n} bugs raised · {n} deferred · {n} skipped`. Skipped rows remain
-open, so say that the walk stopped with open items rather than calling it complete.
+Report `{n} resolved · {n} fixes queued · {n} bugs raised · {n} deferred · {n} skipped`.
+Skipped rows remain open, so say that the walk stopped with open items rather than calling
+it complete. Then run the fix batch when any row is `FIX QUEUED`.

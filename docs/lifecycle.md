@@ -53,7 +53,7 @@ flowchart TB
     LEDGER[("PROMISES.md — FROZEN<br/>one row per leaf promise · the denominator")]:::artifact
     VERDICT{"verdict.py — computed, never asserted"}:::gate
     REVIEW["kerbe:review — risk-tier the diff<br/>tier 1 business logic read line by line · tier 3 trusted only<br/>behind a FULL-suite run · adversarial pass over the review<br/>recorded as QR-n in REVIEW.md"]:::skill
-    RWALK["kerbe:rwalk — work the QR with the human<br/>one row per turn · pre-read, opened in the editor<br/>struck in place with the mechanism · state lives in the rows"]:::skill
+    RWALK["kerbe:rwalk — work the QR with the human<br/>one row per turn · pre-read, opened in the editor<br/>struck in place with the mechanism · state lives in the rows<br/>ruled fixes built in one batch at the end, never re-walked"]:::skill
     DONE["Slice FINISHED · merge → INDEX: done"]:::done
 
     subgraph FIXLOOP["Loop 2 — remediation, repeats until the verdict clears"]
@@ -75,7 +75,7 @@ flowchart TB
     MORE -- "no" --> COVAUD --> LEDGER --> VERDICT
     VERDICT -- "nothing open" --> REVIEW --> RWALK --> DONE
     REVIEW -- "defects found" --> BUG
-    RWALK -- "a row turns out to be a defect" --> BUG
+    RWALK -- "a defect with blast radius" --> BUG
     VERDICT -- "open rows remain" --> CLASS
     REVERIFY --> COVAUD
     REPORTED["A bug is reported, outside any loop"]:::artifact --> BUG

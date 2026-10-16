@@ -2,15 +2,15 @@
 name: rwalk
 description: >-
   Use when a recorded review needs working through with a human — walks a QR's rows one
-  turn at a time, pre-reads and opens each item, records verdicts in place, and resumes
-  from the first unresolved row.
+  turn at a time, pre-reads and opens each item, records verdicts in place, resumes from
+  the first unresolved row, and builds every ruled fix in one batch at the end.
 ---
 
 # kerbe:rwalk — walk a recorded review
 
 `kerbe:review` produces a queue of decisions; this skill spends it with the human after
-review and before merge. It records verdicts but never fixes application code. Defects
-route to `kerbe:bug`.
+review and before merge. The walk only collects decisions. Fixes the human rules are
+queued and built in one batch when the walk ends, without asking again.
 
 ## Setup
 
@@ -34,11 +34,13 @@ ids: `B1…`, `G1…`, `F1…`.
 
 A row is closed only when it has an unstruck bold status: `RESOLVED`, `VERIFIED`,
 `FIXED`, `DEFERRED`, `FALSE POSITIVE`, `EXPECTED`, `IMPROVED`, `REMOVED`, or
-`BUG-{id} RAISED`. Otherwise it is open. Tier 3 is closed by its bold status line directly
-under `### Boilerplate`.
+`BUG-{id} RAISED`. `FIX QUEUED` is decided, so the walk skips it, but it stays owed to the
+fix batch. Otherwise it is open. Tier 3 is closed by its bold status line directly under
+`### Boilerplate`.
 
 - Target the newest QR with anything open. If all are closed, report
-  `{slice} QR-{n}: {m}/{m} closed — nothing to walk` and stop.
+  `{slice} QR-{n}: {m}/{m} closed — nothing to walk` and stop. If only `FIX QUEUED` rows
+  remain, start the fix batch instead.
 - Start at its first open row in `B → G → F` order.
 - A forced id overrides this. If it is already closed, ask once before reopening it. A
   bare id with multiple open QRs means the newest; say which QR was chosen.
@@ -88,7 +90,8 @@ the others wait. Never batch Business logic or Flags.
 |---|---|
 | `ok` or bare Enter | Record `RESOLVED (VERIFIED)` with the pre-read mechanism; next item |
 | prose or a question | Discuss; stay on this item and write nothing |
-| `bug` | Route to `kerbe:bug`, record `BUG-{id} RAISED`; next item |
+| `fix` [change] | Record `FIX QUEUED` with the ruled change; next item. Fix nothing yet |
+| `bug` | Defect with blast radius (data model, shared guard, migration): route to `kerbe:bug`, record `BUG-{id} RAISED`; next item |
 | `defer` | Record `DEFERRED` with reason and mirror to Known Issues; next item |
 | `skip` | Leave open; next item |
 | `back` | Return to the previous item |
@@ -103,10 +106,14 @@ id back-filling, challenged tier 3, decision routing, the scoped commit, and the
 tally. Write each verdict immediately; commit once at `stop` or when the queue empties.
 Skipped rows keep the QR open—never report that walk as complete.
 
+After that commit, if any row is `FIX QUEUED`, run the fix batch per
+[references/fix-batch.md](references/fix-batch.md) straight away. Do not ask whether to
+fix, and do not walk the fixes afterwards.
+
 ## Non-negotiable rules
 
-- Never edit application code. A defect routes to `kerbe:bug`; missing promised work
-  routes to `kerbe:coverage`.
+- The walk never edits application code. Fixes go to the batch; a defect with blast
+  radius routes to `kerbe:bug`; missing promised work routes to `kerbe:coverage`.
 - Never mark a row the human did not answer on, and never walk ahead of them.
 - Keep resolved rows in place: id unstruck, original cells struck, status unstruck. Never
   add checkboxes or ✅, renumber an id, or reuse one.

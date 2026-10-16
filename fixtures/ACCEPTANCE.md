@@ -248,14 +248,22 @@ Any change to `skills/rwalk/` reruns before real use:
 2. **Turn-discipline run**, on a real REVIEW.md with open rows. The walk must:
    resolve and announce its position before the first turn; present **one** item and stop;
    never mark a row the human did not answer on; write the row's edit at the moment it
-   resolves, not at the end; and leave application code untouched. Any of these failing is
+   resolves, not at the end; and leave application code untouched during the walk (a
+   `fix` verdict writes `FIX QUEUED` and nothing else). Any of these failing is
    a gate failure — they are the whole skill. Stop the run after three items and inspect
    the file: three rows struck in place with an unstruck bold status and a mechanism
    sentence, every other row byte-identical.
 3. **Resume**, immediately after: a second invocation with no arguments must land on the
    fourth row without being told where it was. Resume is derived from the rows themselves,
-   so a run that needs a pointer file has already failed this.
-4. The judgment half — whether a pre-verdict is worth reading, whether a verdict's
+   so a run that needs a pointer file has already failed this. `FIX QUEUED` rows are
+   skipped, never re-presented.
+4. **Fix batch**, on a scratch fixture QR with two `FIX QUEUED` rows on disjoint files. When
+   the queue ends the walk must start `kerbe:implement` review-fix mode with no question
+   between the walk and the batch or between fixes. Inspect: one regression test per row,
+   a full-suite run, each row now `FIXED {sha}` with its ruling kept. Then run
+   `kerbe:review` on the result: both fix commits appear as rows already closed
+   `FIXED (ruled QR-{m}/{id})`, and `kerbe:rwalk` reports nothing to walk.
+5. The judgment half — whether a pre-verdict is worth reading, whether a verdict's
    mechanism sentence would survive the reviewer forgetting — is validated on the first
    real walk and recorded below. Stated, not hidden.
 

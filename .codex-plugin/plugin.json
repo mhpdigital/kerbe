@@ -1,6 +1,6 @@
 {
   "name": "kerbe",
-  "version": "0.10.2",
+  "version": "0.11.0",
   "description": "Portable slice-based SDLC skills with stack, design and executor adapters.",
   "author": {
     "name": "MHP Digital",

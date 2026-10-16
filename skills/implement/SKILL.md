@@ -3,7 +3,8 @@ name: implement
 description: >-
   Use when a slice's frozen plan is ready to build — resolves the workspace, derives the
   live progress tracker from the plan, dispatches one isolated worker per task, and gates
-  each task on real verification evidence. Also runs remediation from a coverage fix list.
+  each task on real verification evidence. Also runs remediation from a coverage fix list,
+  and the review-fix batch of a walked QR's `FIX QUEUED` rows.
 ---
 
 # kerbe:implement — build the slice from its frozen plan
@@ -25,8 +26,9 @@ the orchestration needs and stalls long plans halfway.
    there, wrapped in `stack.exec` when configured) and the executor adapter
    (`adapters/executor/{name}.md` — it owns the dispatch mechanism; this skill states worker
    intent only).
-3. **Resolve the task source — computed, never a flag:** the user's statement wins; else
-   `FIX_PLAN.md` when one exists with unticked tasks (remediation mode, the section at the
+3. **Resolve the task source — computed, never a flag:** the user's statement wins (a
+   `QR-{n} FIX QUEUED rows` source from `/kerbe:rwalk` is review-fix mode, the last
+   section); else `FIX_PLAN.md` when one exists with unticked tasks (remediation mode, the section at the
    end); else `PLAN.md`. Neither present ⇒ stop and run `/kerbe:plan` — deriving tasks from
    spec docs on the fly is how an unreviewed plan gets built. A `PLAN.md` whose header reads
    `**Status:** draft` is not a task source either ⇒ stop: its open decisions go to
@@ -381,6 +383,26 @@ rather than a plan:
 - Exit condition: re-verify the closed rows against the same frozen ledger and recompute
   `{plugin}/skills/coverage/scripts/verdict.py` — the verdict, not your summary, says how
   much closer the slice is.
+
+## Review-fix mode — building a walked QR's rulings
+
+When the task source is a QR's `FIX QUEUED` rows, handed over by `/kerbe:rwalk`:
+
+- One task per row, keyed by its id (`B3`, `F2`). The row's ruling is the task text and its
+  "proves it" clause is the one case the task must add as a regression test. Rows that
+  touch the same file go to one worker; rows on disjoint files run concurrently.
+- Effort is `standard`, or `deep` for rows touching auth, ownership, query filtering, state
+  transitions, uploads or money. Record the choice as a Ruling, since no plan set it.
+- Run the whole batch without pausing. The human ruled every fix during the walk, so a
+  question between fixes is the failure this mode exists to remove.
+- A fix that turns out to need a data-model, shared-guard or migration change stops for
+  that row only: leave it `FIX QUEUED` with `Blocked: needs /kerbe:bug` and carry on.
+- The tracker and the per-task gate apply unchanged. After the full suite in lane 0, write
+  each row in `REVIEW.md` as `**FIXED {sha} {date}**`, keeping the ruling and naming the
+  test, or leave it `FIX QUEUED` with a `Blocked:` note. Commit `REVIEW.md` scoped by
+  pathspec.
+- Hand off to `/kerbe:review`, which records these commits as closed rows citing the
+  ruling. Do not ask the human to walk them.
 
 ## Rules
 
