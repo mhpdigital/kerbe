@@ -1413,6 +1413,26 @@ the talk (Atomic's contracts/reviewers/verifiers) is unreviewed — watch before
       vs hours vs overnight). Add a budget decision to `plan` (or `review`) and let long-running
       verification run in the background while the human reviews in parallel.
 
+## Backlog — gaps from the Spec Kit comparison (noted 2026-09-30, not yet scheduled)
+
+Source: GitHub Spec Kit v1.0.13 (https://github.com/github/spec-kit), `templates/commands/converge.md`
+and `analyze.md`. `converge` is Spec Kit's counterpart to `coverage audit`, but its inventory is
+rebuilt per run and "Converged" is asserted — the defect `coverage` was rebuilt to remove. What it
+does that kerbe does not is below.
+
+- [ ] **`unrequested` and `contradicts` rows in `coverage audit`.** The ledger only measures what
+      is missing (absent / partial / GAP). Add two row kinds: code that exceeds the promises
+      (built but never promised) and code that conflicts with a promise. They must not move the
+      frozen denominator — record them as separate rows `verdict.py` reports alongside, and route
+      them like any open row (`unrequested` → spec decision or removal; `contradicts` → `bug`).
+      Needs planted `unrequested`/`contradicts` fixtures in `fixtures/ACCEPTANCE.md` before use.
+- [ ] **Requirements-quality check before `grill`.** Nothing lints the spec docs themselves.
+      Flag vague adjectives with no measurable meaning (fast, secure, intuitive), leftover
+      placeholders (TODO, ???, `<placeholder>`), and terminology drift (one concept named
+      differently across the slice's docs). Findings become grill questions, so the check feeds
+      `grill` rather than being its own gate. Where it lives (a `grill` pre-step or `coverage
+      pre-impl`) is undecided.
+
 ## Non-goals — noted, not scheduled
 
 **Per-change coding discipline (single fixes) is outside the suite, deliberately.** Kerbe's
@@ -1426,6 +1446,14 @@ caught an existing test asserting the buggy outcome). If this ever needs owning,
 not making kerbe skills model-invocable; it is stating the assumed per-change discipline
 inside `kerbe:implement` and the review-fix loop so the ceremony travels with the skill.
 Not required now — recorded so the boundary stays a decision, not an accident.
+
+**No project constitution / principles layer (decided 2026-09-30).** Spec Kit keeps a per-project
+`constitution.md` whose MUST principles `analyze` and `converge` flag as CRITICAL. Kerbe does not
+add one, whether as a principles section in the adapter or in `kerbe.yml`. For a one-person
+operation the standard is the tool choice itself — Symfony, Flutter, AWS — and following its
+conventions; a governance document of project-specific rules on top is more to maintain than
+it enforces. Rules that must hold everywhere already live in the stack adapters and the user's
+own instructions.
 
 ## Sequencing summary
 
