@@ -57,6 +57,7 @@ kerbe:
   executor:
     adapter: claude                       # adapters/executor/<name>.md — how a task worker is dispatched
     routing: {}                           # optional task-class overrides, e.g. {business-logic: claude@standard}
+      # review-critic: codex@deep         #   kerbe:review's adversarial critic on an OpenAI model (adapters/executor/codex.md)
   constraints: []                         # environment rules that hold for EVERY skill's dispatches, e.g.
     # - "never run a destructive database command"
   constraints_by_skill: {}                # rules that hold for ONE skill only, e.g.

@@ -117,7 +117,7 @@ command.
 **Diff:** {base sha}..{tip sha} — {n} files ({--stat one-liner})
 **Reviewed at:** {tip sha}
 **Test evidence:** {the suite run and its summary line, or "none — <why>"}
-**Adversarial pass:** {ran / not run — what it changed}
+**Adversarial pass:** {ran ({executor@effort}) / not run — what it changed}
 
 ### Summary
 {Three to six sentences: what the diff does, the tier split, the headline finding.}
@@ -147,7 +147,11 @@ If none: "None."}
 
 Before recording, subject the draft to a critic whose job is to **break** it — a fresh
 reviewer with no prior context, dispatched per the executor adapter so it isn't anchored
-on the first pass. It must check:
+on the first pass. When `executor.routing` has a `review-critic` route (e.g.
+`review-critic: codex@deep`), dispatch the critic per that route's adapter instead: a
+critic from a different model family shares fewer of the first pass's blind spots. The
+critic is read-only and its claims are checked against the code before the draft changes.
+Record which executor ran in the QR's `Adversarial pass` line. It must check:
 
 - **Coverage** — every changed file categorised (diff `--name-only` against the tables);
   every tier-1 file has line references.

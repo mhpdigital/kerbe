@@ -132,8 +132,11 @@ commits as closed rows citing the ruling, so nobody walks their own fixes twice.
 ### Executors
 
 Skill bodies name worker **intent** only; the dispatch mechanism lives in
-`adapters/executor/` (`claude`, `inline`). A grep guard in `tests/test_portability.py` keeps
-it that way, so the lifecycle stays portable to another harness.
+`adapters/executor/` (`claude`, `inline`, `codex`). A grep guard in `tests/test_portability.py`
+keeps it that way, so the lifecycle stays portable to another harness. `codex` is
+routing-only: `executor.routing: {review-critic: codex@deep}` sends `kerbe:review`'s
+adversarial critic to an OpenAI model through the Codex CLI, so the critic comes from a
+different model family than the first pass.
 
 ## The lifecycle in one picture
 
@@ -149,7 +152,7 @@ aspect ratio.
   `bug`, `review`, `rwalk`), with shared `SKILL.md` instructions and host-specific metadata
 - `adapters/` — design adapters (`figma`, `claude-design` — git-committed `*.dc.html`
   artboards, node id = element `id`, no API — and `none`), stack adapters (`symfony`, `flutter`:
-  `verify.md` / `commands.md` / `impact.md` / `risk-tiers.md`), executor adapters (`claude`, `inline`)
+  `verify.md` / `commands.md` / `impact.md` / `risk-tiers.md`), executor adapters (`claude`, `inline`, `codex`)
 - `fixtures/` — mini projects with planted, known gaps; the standing acceptance gate for
   every change to a skill (`fixtures/ACCEPTANCE.md`)
 - `docs/` — specs and implementation plans
