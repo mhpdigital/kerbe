@@ -48,8 +48,9 @@ If the human says the screen is unusable, kill the server process and take case 
 2. Mirror each `DEFERRED` row to Known Issues.
 3. Commit per [recording.md](recording.md), with `REVIEW-discussion.md` added to the
    pathspec when it exists.
-4. Report the tally.
-5. Run the fix batch per [fix-batch.md](fix-batch.md) straight away when any row is
+4. If `reason` is `challenge`, run the tier 3 opening turn as the ask case (case 4 in
+   [turns.md](turns.md)), never the inferred case 3. Walk any new flags in the
+   terminal, then commit.
+5. Report the tally.
+6. Run the fix batch per [fix-batch.md](fix-batch.md) straight away when any row is
    `FIX QUEUED`. Do not ask first.
-6. If `reason` is `challenge`, run the tier 3 opening turn as the ask case (case 4 in
-   [turns.md](turns.md)), never the inferred case 3.
