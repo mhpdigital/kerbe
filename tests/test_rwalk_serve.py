@@ -274,6 +274,13 @@ class ServeTest(Harness, unittest.TestCase):
         self.assertEqual(out["reason"], "finish")
         self.assertEqual(self.proc.wait(timeout=5), 0)
 
+    def test_finish_challenge_reason(self):
+        self.json("POST", "/api/finish", {"challenge": True})
+        out = json.loads(self.lines.get(timeout=10))
+        self.assertTrue(out["finished"])
+        self.assertEqual(out["reason"], "challenge")
+        self.assertEqual(self.proc.wait(timeout=5), 0)
+
     def test_port_closed_after_finish(self):
         self.json("POST", "/api/finish", {})
         self.proc.wait(timeout=10)
@@ -362,6 +369,48 @@ class ServePrereadCrashTest(Harness, unittest.TestCase):
         self.assertEqual(self.wait_preread("F1")["status"], "ready")
         self.json("POST", "/api/verdict", {"row": "B1", "kind": "verified"})
         self.assertIn("Confirmed: Answer.", self.review.read_text())
+
+
+class ServeCrlfTest(Harness, unittest.TestCase):
+    """A CRLF REVIEW.md keeps CRLF on every line after a screen verdict."""
+
+    def configure(self):
+        text = self.review.read_text()
+        self.review.write_bytes(text.replace("\n", "\r\n").encode("utf-8"))
+
+    def test_verdict_preserves_crlf(self):
+        self.json("POST", "/api/verdict", {"row": "B1", "kind": "verified", "mechanism": "m"})
+        data = self.review.read_bytes()
+        self.assertIn(b"RESOLVED (VERIFIED)", data)
+        self.assertEqual(data.count(b"\r\n"), data.count(b"\n"))
+
+
+class ServeSymlinkTest(Harness, unittest.TestCase):
+    """A symlinked REVIEW.md is written through and keeps its link."""
+
+    def configure(self):
+        real = self.root / "planning-REVIEW.md"
+        real.write_text(self.review.read_text())
+        self.review.unlink()
+        self.review.symlink_to(real)
+        self.real = real
+
+    def test_verdict_keeps_symlink(self):
+        self.json("POST", "/api/verdict", {"row": "B1", "kind": "verified", "mechanism": "m"})
+        self.assertTrue(self.review.is_symlink())
+        self.assertIn("RESOLVED (VERIFIED)", self.real.read_text())
+
+
+class ServeLongPrereadTest(Harness, unittest.TestCase):
+    """A long pre-read is capped when it becomes a Verified mechanism."""
+    fake_src = "import sys\nsys.stdin.read()\nprint('word ' * 400)\n"
+
+    def test_verified_mechanism_capped(self):
+        self.assertEqual(self.wait_preread("B1")["status"], "ready")
+        self.json("POST", "/api/verdict", {"row": "B1", "kind": "verified"})
+        line = next(l for l in self.review.read_text().splitlines() if "| B1 |" in l)
+        self.assertIn("…", line)
+        self.assertLess(line.count("word"), 130)
 
 
 class ScreenFileTest(unittest.TestCase):

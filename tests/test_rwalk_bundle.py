@@ -193,6 +193,11 @@ class BundleTest(unittest.TestCase):
         self.assertTrue(r.stderr.startswith("error:"), r.stderr)
         self.assertNotIn("Traceback", r.stderr)
 
+    def test_no_current_qr_raises_bundle_error(self):
+        self.review.write_text("# Review\n\nNo quality review here.\n")
+        with self.assertRaisesRegex(bundle.BundleError, "no open quality review"):
+            bundle.build(self.review, self.repo, "main", "cards")
+
 
 if __name__ == "__main__":
     unittest.main()

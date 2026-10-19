@@ -293,9 +293,10 @@ def _write_tier3(lines, qid, today):
         if TIER3_RE.search("".join(lines[s:e])):
             raise InvalidVerdict("tier 3 already has a status")
         n = 0
-        for l in lines[s + 1:e]:
-            if l.lstrip().startswith("|") and "---" not in l:
-                if _row_cells(l)[0].strip() != "File":
+        for l in lines[s + 1:e]:  # counted exactly as parse() counts tier3_files
+            if l.lstrip().startswith("|") and not SEPARATOR_RE.match(l.lstrip()):
+                cells = _row_cells(l)
+                if cells and cells[0].strip() != "File":
                     n += 1
         m = re.search(r"\*\*Test evidence:\*\*[ \t]*(\S[^\n]*)", "".join(lines[a:b]))
         ev = m.group(1).strip() if m else ""

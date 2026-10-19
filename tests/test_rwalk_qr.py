@@ -147,6 +147,13 @@ class QrTest(unittest.TestCase):
         code, o = run_checker(out)
         self.assertEqual(code, 0, o)
 
+    def test_tier3_count_matches_parse(self):
+        text = TEXT.replace("| card list markup |\n",
+                            "| card list markup |\n| `a---b.twig` | dashes |\n|\n")
+        self.assertEqual(qr_mod.parse(text)[0].tier3_files, 2)
+        out = qr_mod.write_verdict(text, "QR-1", "tier3", Verdict("tier3"), "2026-10-20")
+        self.assertIn("— 2 files", out)
+
     def test_tier3_uses_test_evidence(self):
         text = TEXT.replace("**Reviewed at:**", "**Test evidence:** 212 passed\n**Reviewed at:**")
         out = qr_mod.write_verdict(text, "QR-1", "tier3", Verdict("tier3"), "2026-10-20")

@@ -47,6 +47,14 @@ bundle_mod = _load("bundle")
 discuss = _load("discuss")
 editor = _load("classify_editor_open")
 
+MECHANISM_CAP = 600
+
+
+def cap(text, limit=MECHANISM_CAP):
+    """Cap a pre-read stored as a Verified mechanism at limit characters, ending in …."""
+    return text if len(text) <= limit else text[:limit - 1].rstrip() + "…"
+
+
 DECIDED_MAP = {"FIX QUEUED": "fix", "BUG PENDING": "bug", "DEFERRED": "defer"}
 
 
@@ -62,8 +70,9 @@ def count_key(status):
 
 def atomic_write(path, text):
     """Write text to a temp file beside path, then os.replace it over path, so a
-    concurrent reader sees the old file or the new one, never half of it."""
-    path = Path(path)
+    concurrent reader sees the old file or the new one, never half of it. The path is
+    resolved first, so a symlinked file is written through and keeps its link."""
+    path = Path(path).resolve()
     tmp = tempfile.NamedTemporaryFile("w", dir=str(path.parent), delete=False,
                                       encoding="utf-8", newline="",
                                       prefix=path.name + ".", suffix=".tmp")
@@ -139,7 +148,9 @@ class App:
     # (current, live_bundle, counts) take no lock and rely on that atomic replace.
     # Only main() holds the lock around the final counts() and exit line.
     def read_review(self):
-        return self.review.read_text(encoding="utf-8")
+        # newline="" keeps CRLF intact, so write_verdict sees and keeps the file's EOLs.
+        with open(self.review, encoding="utf-8", newline="") as f:
+            return f.read()
 
     def current(self):
         text = self.read_review()
@@ -176,6 +187,8 @@ class App:
                 if self.done.is_set():
                     return
                 continue
+            if self.done.is_set():
+                return
             with self.pcond:
                 if rid in self.started:
                     continue
@@ -306,6 +319,9 @@ def make_handler(app):
                     return self.send_json(200, app.preread[rid])
             except (bundle_mod.BundleError, OSError, UnicodeDecodeError) as e:
                 return self.send_json(500, {"error": str(e)})
+            except Exception as e:  # never drop the connection or send a trace
+                print("internal error on %s: %r" % (u.path, e), file=sys.stderr)
+                return self.send_json(500, {"error": "internal error"})
             self.send_json(404, {"error": "not found"})
 
         def do_POST(self):
@@ -326,6 +342,9 @@ def make_handler(app):
                 h(body)
             except (OSError, UnicodeDecodeError) as e:
                 self.send_json(500, {"error": str(e)})
+            except Exception as e:  # never drop the connection or send a trace
+                print("internal error on %s: %r" % (path, e), file=sys.stderr)
+                self.send_json(500, {"error": "internal error"})
 
         def need(self, body, key):
             v = body.get(key)
@@ -354,7 +373,7 @@ def make_handler(app):
                 if kind == "verified" and not fields["mechanism"].strip():
                     pr = app.preread.get(rid)
                     if pr and pr["status"] == "ready":
-                        fields["mechanism"] = pr["text"]
+                        fields["mechanism"] = cap(pr["text"])
                 try:
                     text = qr_mod.write_verdict(app.read_review(), app.qr_id, rid,
                                                 qr_mod.Verdict(kind=kind, **fields), today)
@@ -376,7 +395,7 @@ def make_handler(app):
 
         def fin(self, body):
             self.send_json(200, {"ok": True})
-            app.finish(True, "finish")
+            app.finish(True, "challenge" if body.get("challenge") is True else "finish")
 
         def ask(self, body):
             rid = self.need(body, "row")
@@ -421,9 +440,12 @@ def make_handler(app):
                 self.wfile.flush()
             except (BrokenPipeError, ConnectionError):
                 pass
-            except OSError as e:
+            except Exception as e:  # any failure becomes an error line, never a trace
+                print("ask failed for %s: %r" % (rid, e), file=sys.stderr)
+                err = str(e) if isinstance(e, OSError) else "internal error"
                 try:
-                    self.wfile.write((json.dumps({"type": "error", "text": str(e)}) + "\n").encode())
+                    self.wfile.write((json.dumps({"type": "error", "error": err, "text": err})
+                                      + "\n").encode())
                 except OSError:
                     pass
 

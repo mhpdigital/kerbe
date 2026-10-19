@@ -99,7 +99,10 @@ def _one_line(s):
 
 def append_discussion(path, qr_id, row, question, answer, when):
     path = Path(path)
-    text = path.read_text(encoding="utf-8", newline="") if path.exists() else ""
+    text = ""
+    if path.exists():
+        with open(path, encoding="utf-8", newline="") as f:  # read_text(newline=) is 3.13+
+            text = f.read()
     lines = text.splitlines(keepends=True)
     first = next((l for l in lines if l.endswith("\n")), "")
     eol = "\r\n" if first.endswith("\r\n") else "\n"

@@ -116,10 +116,11 @@ def _row_diff(repo, base, ref, row):
 
 
 def build(review_path, repo, base, slice_name):
-    qrs = qr_mod.parse(Path(review_path).read_text(encoding="utf-8"))
+    with open(review_path, encoding="utf-8", newline="") as f:
+        qrs = qr_mod.parse(f.read())
     q = qr_mod.current_qr(qrs)
     if q is None:
-        raise SystemExit("no open quality review in %s" % review_path)
+        raise BundleError("no open quality review in %s" % review_path)
     ref = q.reviewed_at or "HEAD"
     _check_ref(repo, base, "base")
     _check_ref(repo, ref, "reviewed_at")
