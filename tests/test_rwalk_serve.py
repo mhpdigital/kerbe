@@ -364,6 +364,19 @@ class ServePrereadCrashTest(Harness, unittest.TestCase):
         self.assertIn("Confirmed: Answer.", self.review.read_text())
 
 
+class ScreenFileTest(unittest.TestCase):
+    """Static checks on the screen file; no server needed."""
+
+    def test_index_has_no_external_urls(self):
+        html = (REPO / "skills/rwalk/screen/index.html").read_text()
+        self.assertNotRegex(html, r"https?://(?!127\.0\.0\.1)")
+
+    def test_index_reads_token_from_fragment(self):
+        html = (REPO / "skills/rwalk/screen/index.html").read_text()
+        self.assertIn("location.hash", html); self.assertIn("X-Kerbe-Token", html)
+        self.assertNotIn("localStorage", html)
+
+
 class ServeIdleTest(Harness, unittest.TestCase):
     idle = ("--idle-seconds", "2")
 

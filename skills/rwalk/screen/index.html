@@ -1,0 +1,710 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>rwalk review</title>
+<style>
+:root {
+  --bg: #f4f6f8; --surface: #ffffff; --ink: #18202c; --muted: #5a6474; --line: #dce1e8;
+  --accent: #0f6e66; --bug: #b42318; --fix: #a15c07; --defer: #6941c6; --ok: #1f7a3d;
+  --add: #e6f5ea; --del: #fcebea; --inr: #fff4cf;
+  --sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  color-scheme: light dark;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0e1218; --surface: #151b24; --ink: #e5e9ef; --muted: #98a2b2; --line: #263040;
+    --accent: #3cc7b8; --bug: #f97066; --fix: #f5b546; --defer: #a991fb; --ok: #5bd18a;
+    --add: #10301d; --del: #3a1618; --inr: #3a3214;
+  }
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.45 var(--sans); }
+button { font: inherit; color: inherit; cursor: pointer; border: 1px solid var(--line);
+  background: var(--surface); border-radius: 6px; padding: 4px 10px; }
+button:hover:not(:disabled) { border-color: var(--accent); }
+button:disabled { opacity: .45; cursor: default; }
+button.primary { background: var(--accent); border-color: var(--accent); color: var(--bg); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+kbd { font: 11px var(--mono); color: var(--muted); border: 1px solid var(--line);
+  border-radius: 3px; padding: 0 3px; margin-left: 4px; }
+textarea, input[type=text] { font: inherit; color: inherit; background: var(--bg);
+  border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; width: 100%; resize: vertical; }
+.muted { color: var(--muted); }
+.mono { font-family: var(--mono); }
+
+/* frame */
+.app { display: flex; flex-direction: column; height: 100vh; }
+.top { display: flex; align-items: center; gap: 12px; padding: 8px 16px; background: var(--surface);
+  border-bottom: 1px solid var(--line); }
+.top .meta { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.toast { color: var(--ok); font-size: 13px; min-width: 0; }
+.banner { display: none; padding: 8px 16px; background: var(--del); color: var(--ink);
+  border-bottom: 1px solid var(--bug); overflow-wrap: anywhere; }
+.banner.show { display: flex; gap: 12px; align-items: baseline; }
+.banner b { color: var(--bug); }
+.banner button { margin-left: auto; padding: 0 8px; }
+.cols { display: grid; grid-template-columns: 230px minmax(0, 1fr); flex: 1; min-height: 0; }
+
+/* rail */
+.rail { border-right: 1px solid var(--line); overflow-y: auto; padding: 8px 0; background: var(--surface); }
+.rail h3 { font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted);
+  margin: 12px 12px 4px; }
+.rail .item { display: block; width: 100%; text-align: left; border: 0; border-radius: 0;
+  border-left: 3px solid transparent; background: none; padding: 5px 12px; }
+.rail .item.cur { background: var(--bg); border-left-color: var(--accent); }
+.rail .line1 { display: flex; gap: 6px; min-width: 0; }
+.rail .title { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.rid { font-family: var(--mono); font-weight: 600; }
+.rid.B { color: var(--bug); } .rid.G { color: var(--fix); } .rid.F { color: var(--defer); }
+.pill { display: inline-block; font-size: 11px; border-radius: 9px; padding: 0 7px; margin-top: 2px;
+  border: 1px solid currentColor; color: var(--muted); }
+.pill.verified { color: var(--ok); } .pill.fix { color: var(--fix); } .pill.bug { color: var(--bug); }
+.pill.defer { color: var(--defer); }
+.rail .t3 { margin: 16px 12px 4px; padding-top: 8px; border-top: 1px solid var(--line); font-size: 12px; }
+
+/* main */
+.main { overflow-y: auto; min-width: 0; }
+.sec { background: var(--surface); border-bottom: 1px solid var(--line); padding: 12px 16px; min-width: 0; }
+.cap { font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin: 0 0 6px; }
+.explain { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 20px; }
+.why { font-size: 17px; overflow-wrap: anywhere; }
+.mech { white-space: pre-wrap; overflow-wrap: anywhere; }
+.src { margin-top: 8px; font-size: 12px; }
+.fhead { display: flex; align-items: center; gap: 12px; }
+.fhead .path { font-family: var(--mono); overflow-wrap: anywhere; min-width: 0; flex: 1; }
+
+/* diff */
+.diff { font: 12.5px/1.5 var(--mono); padding: 4px 0; min-width: 0; }
+.dl { display: grid; grid-template-columns: 4.5ch 4.5ch 2ch minmax(0, 1fr); border-left: 3px solid transparent; }
+.dl > span { padding: 0 4px; }
+.dl .n { color: var(--muted); text-align: right; user-select: none; }
+.dl .s { color: var(--muted); user-select: none; }
+.dl .c { white-space: pre-wrap; overflow-wrap: anywhere; padding-left: 2ch; text-indent: -2ch; min-width: 0; }
+.dl.a { background: var(--add); } .dl.d { background: var(--del); }
+.dl.in { border-left-color: var(--accent); }
+.dl.c.in { background: var(--inr); }
+.dl.h { display: block; color: var(--muted); padding: 2px 8px; white-space: pre-wrap; overflow-wrap: anywhere; }
+
+/* discussion */
+.msg { margin: 8px 0; overflow-wrap: anywhere; }
+.msg .who { font-weight: 600; margin-right: 6px; }
+.msg .body { white-space: pre-wrap; }
+.msg.err .body { color: var(--bug); }
+.opt { display: flex; gap: 10px; align-items: flex-start; border: 1px solid var(--line); border-radius: 6px;
+  padding: 6px 8px; margin: 4px 0; }
+.opt .k { font-family: var(--mono); font-weight: 600; }
+.opt .v { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.opt.picked { border-color: var(--accent); box-shadow: inset 3px 0 0 var(--accent); }
+.ask { display: flex; gap: 8px; margin-top: 8px; }
+.ask input { flex: 1; }
+
+/* verdict + panels */
+.vbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.vbar .hint { margin-left: auto; font-size: 12px; }
+.panel { border: 1px solid var(--line); border-radius: 8px; padding: 12px; margin-top: 12px; }
+.panel h4 { margin: 0 0 8px; font-size: 13px; }
+.panel label { display: block; font-size: 12px; color: var(--muted); margin: 10px 0 3px; }
+.preview { font: 12px/1.5 var(--mono); white-space: pre-wrap; overflow-wrap: anywhere; background: var(--bg);
+  border: 1px solid var(--line); border-radius: 6px; padding: 8px; }
+.row-actions { display: flex; gap: 8px; margin-top: 10px; }
+.chosen { overflow-wrap: anywhere; }
+.done { padding: 48px 24px; text-align: center; font-size: 18px; }
+@media (max-width: 800px) {
+  .cols { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); }
+  .rail { max-height: 30vh; border-right: 0; border-bottom: 1px solid var(--line); }
+  .explain { grid-template-columns: minmax(0, 1fr); }
+}
+</style>
+</head>
+<body>
+<div class="app" id="app">
+  <div class="top">
+    <div class="meta" id="meta">Loading review…</div>
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <button id="finish" class="primary" disabled>Finish walk</button>
+  </div>
+  <div class="banner" id="banner" role="alert"><b>Error</b><span id="banner-text"></span><button id="banner-x" aria-label="Dismiss">×</button></div>
+  <div class="cols">
+    <nav class="rail" id="rail" aria-label="Review rows"></nav>
+    <main class="main" id="main"></main>
+  </div>
+</div>
+<script>
+"use strict";
+(function () {
+  // ---- state (memory only; REVIEW.md is the walk state) ------------------
+  var TOKEN = null;
+  var bundle = null;
+  var cur = -1;                 // index into bundle.rows; -1 = tier-3 panel
+  var dead = false;             // finished or server gone: no further requests
+  var skipped = {};             // row id -> true (skip writes nothing)
+  var preread = {};             // row id -> {status, text}
+  var talk = {};                // row id -> [{q, a, options, error}]
+  var picked = {};              // row id -> "O1: text"
+  var asking = {};              // row id -> elapsed seconds while a question runs
+  var panel = null;             // null | "fix" | "bug" | "defer" | "verified"
+  var drafts = {};              // row id -> {detail, proves, note}
+  var timers = new Set();
+  var inflight = new Set();
+  var GONE = "Server stopped. Return to the terminal; rerun rwalk without --screen to continue there.";
+  var TIERS = [["B", "Business logic"], ["G", "Glue"], ["F", "Flags"]];
+
+  var $ = function (id) { return document.getElementById(id); };
+
+  function h(tag, attrs) {
+    var el = document.createElement(tag);
+    if (attrs) Object.keys(attrs).forEach(function (k) {
+      var v = attrs[k];
+      if (v === null || v === undefined || v === false) return;
+      if (k === "text") el.textContent = v;
+      else if (k === "cls") el.className = v;
+      else if (k.slice(0, 2) === "on") el.addEventListener(k.slice(2), v);
+      else el.setAttribute(k, v === true ? "" : v);
+    });
+    for (var i = 2; i < arguments.length; i++) {
+      var c = arguments[i];
+      if (c === null || c === undefined || c === false) continue;
+      if (Array.isArray(c)) c.forEach(function (x) { if (x) el.appendChild(typeof x === "string" ? document.createTextNode(x) : x); });
+      else el.appendChild(typeof c === "string" ? document.createTextNode(c) : c);
+    }
+    return el;
+  }
+
+  // ---- token ---------------------------------------------------------------
+  var m = /(?:^#|&)t=([^&]+)/.exec(location.hash || "");
+  if (m) {
+    TOKEN = decodeURIComponent(m[1]);
+    history.replaceState(null, "", location.pathname + location.search);
+  }
+
+  // ---- errors / stop -------------------------------------------------------
+  function showError(msg) {
+    $("banner-text").textContent = " " + msg;
+    $("banner").classList.add("show");
+  }
+  $("banner-x").addEventListener("click", function () {
+    if (!dead) $("banner").classList.remove("show");
+  });
+
+  function halt() {
+    dead = true;
+    timers.forEach(function (t) { clearTimeout(t); clearInterval(t); });
+    timers.clear();
+    inflight.forEach(function (ac) { try { ac.abort(); } catch (e) {} });
+    inflight.clear();
+  }
+
+  function serverGone() {
+    if (dead) return;
+    halt();
+    showError(GONE);
+    $("finish").disabled = true;
+  }
+
+  function ApiError(msg, status) { this.message = msg; this.status = status; }
+
+  function api(path, body, stream) {
+    if (dead) return Promise.reject(new ApiError("stopped", 0));
+    var ac = new AbortController();
+    inflight.add(ac);
+    var headers = { "X-Kerbe-Token": TOKEN };
+    if (body !== undefined) headers["Content-Type"] = "application/json";
+    return fetch(path, {
+      method: body === undefined ? "GET" : "POST", headers: headers, cache: "no-store",
+      body: body === undefined ? undefined : JSON.stringify(body), signal: ac.signal
+    }).then(function (res) {
+      if (!res.ok) {
+        return res.text().then(function (t) {
+          var msg = "HTTP " + res.status;
+          try { msg = JSON.parse(t).error || msg; } catch (e) {}
+          inflight.delete(ac);
+          throw new ApiError(msg, res.status);
+        });
+      }
+      if (stream) return { res: res, done: function () { inflight.delete(ac); } };
+      return res.json().then(function (j) { inflight.delete(ac); return j; });
+    }, function (err) {
+      inflight.delete(ac);
+      if (!dead && !(err && err.name === "AbortError")) serverGone();
+      throw new ApiError(dead ? "stopped" : String(err), 0);
+    });
+  }
+
+  function report(e) {
+    if (dead) return;
+    if (e instanceof ApiError) { if (e.status) showError(e.message); }
+    else showError(String(e && e.message || e));
+  }
+
+  function later(fn, ms) {
+    if (dead) return null;
+    var t = setTimeout(function () { timers.delete(t); if (!dead) fn(); }, ms);
+    timers.add(t);
+    return t;
+  }
+
+  var toastTimer = null;
+  function toast(msg) {
+    $("toast").textContent = msg;
+    if (toastTimer) { clearTimeout(toastTimer); timers.delete(toastTimer); }
+    toastTimer = later(function () { $("toast").textContent = ""; }, 4000);
+  }
+
+  // ---- status helpers --------------------------------------------------------
+  function pillOf(row) {
+    var s = row.status;
+    if (!s) return skipped[row.id] ? ["skipped", "skipped"] : ["open", "open"];
+    if (s === "FIX QUEUED") return ["fix", "fix queued"];
+    if (s === "BUG PENDING") return ["bug", "bug pending"];
+    if (/^BUG-\S+ RAISED$/.test(s)) return ["bug", s.toLowerCase()];
+    if (s === "DEFERRED") return ["defer", "deferred"];
+    if (s === "RESOLVED (VERIFIED)" || s === "VERIFIED") return ["verified", "verified"];
+    return ["verified", s.toLowerCase()];
+  }
+  function openCount() { return bundle.rows.filter(function (r) { return !r.status; }).length; }
+  function tier3Pending() { return bundle && bundle.tier3 && bundle.tier3.files > 0 && !bundle.tier3.status; }
+  function row() { return cur >= 0 ? bundle.rows[cur] : null; }
+  function range(r) {
+    if (r.start == null) return "";
+    return r.end != null && r.end !== r.start ? "L" + r.start + "–" + r.end : "L" + r.start;
+  }
+
+  // ---- REVIEW.md preview (illustrative; mirrors qr.escape_cell) ----------------
+  function escapeCell(s) {
+    s = String(s).trim().replace(/(?<!\\)\|/g, "\\|");
+    s = s.replace(/[*~]{2,}/g, function (x) { return x.split("").map(function (c) { return "\\" + c; }).join(""); });
+    return s.split(/\r\n|\r|\n/).map(function (p) { return p.trim(); }).filter(Boolean).join("<br>");
+  }
+  function strike(s) {
+    s = String(s || "").trim();
+    if (!s || (s.slice(0, 2) === "~~" && s.slice(-2) === "~~")) return s;
+    return "~~" + s + "~~";
+  }
+  function today() {
+    var d = new Date();
+    return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+  }
+  function fixPreview(r, option, detail, proves) {
+    var ruling = [option, detail].filter(function (p) { return p && p.trim(); }).map(escapeCell).join("<br>");
+    var why = "Ruled: " + (ruling || "…") + " · proves it: " + (proves.trim() ? escapeCell(proves) : "…");
+    var status = "**FIX QUEUED " + today() + "**";
+    if (r.tier === "F") return "**" + r.title + "** " + strike(r.why) + " " + status + " " + why;
+    return "| " + r.id + " | " + strike(r.title) + " " + status + " | " + strike(r.why) + " " + why + " | ~~…~~ |";
+  }
+
+  // ---- rendering -------------------------------------------------------------
+  function renderTop() {
+    var t3 = !bundle.tier3.files ? "no tier 3" : bundle.tier3.status ? bundle.tier3.status.toLowerCase() : "tier 3 unanswered";
+    var parts = [bundle.slice, bundle.qr, bundle.rows.length + " items", openCount() + " open", t3];
+    if (bundle.reviewed_at) parts.push("reviewed at " + bundle.reviewed_at);
+    $("meta").textContent = parts.join(" · ");
+  }
+
+  function renderRail() {
+    var rail = $("rail");
+    rail.textContent = "";
+    TIERS.forEach(function (t) {
+      var rows = bundle.rows.filter(function (r) { return r.tier === t[0]; });
+      if (!rows.length) return;
+      rail.appendChild(h("h3", { text: t[1] }));
+      rows.forEach(function (r) {
+        var i = bundle.rows.indexOf(r), p = pillOf(r);
+        // Rail shows a short title: no code-span backticks, no repeated flag id.
+        var short = r.title.replace(/`/g, "").replace(new RegExp("^" + r.id + "\\s*—\\s*"), "");
+        rail.appendChild(h("button", {
+          cls: "item" + (i === cur ? " cur" : ""), "aria-current": i === cur ? "true" : null,
+          onclick: function () { select(i); }
+        },
+          h("div", { cls: "line1" }, h("span", { cls: "rid " + r.tier, text: r.id }),
+            h("span", { cls: "title", text: short, title: r.title })),
+          h("span", { cls: "pill " + p[0], text: p[1] })));
+      });
+    });
+    if (bundle.tier3.files) {
+      var n = bundle.tier3.files;
+      var label = "Boilerplate: " + n + (n === 1 ? " file" : " files") + ", " +
+        (bundle.tier3.status ? bundle.tier3.status.toLowerCase() : "tier 3 unanswered");
+      rail.appendChild(h("div", { cls: "t3 muted" },
+        tier3Pending() ? h("button", { cls: "item" + (cur < 0 ? " cur" : ""), onclick: function () { select(-1); }, text: label })
+          : label));
+    }
+  }
+
+  function renderTier3() {
+    var n = bundle.tier3.files;
+    return [h("section", { cls: "sec" },
+      h("p", { cls: "cap", text: "Tier 3 · Boilerplate" }),
+      h("p", { cls: "why", text: n + (n === 1 ? " file" : " files") + " in the Boilerplate table. Don't read them; trust the full suite." }),
+      h("p", { cls: "muted", text: "Accept to record the tier-3 line in REVIEW.md and start on the Business-logic rows. A challenge needs tier-1 reading and new flags, so it happens in the terminal walk." }),
+      h("div", { cls: "row-actions" },
+        h("button", { cls: "primary", id: "t3-accept", onclick: acceptTier3, text: "Accept" }),
+        h("button", { onclick: function () { finish(true); }, text: "Challenge in the terminal" })))];
+  }
+
+  function renderRow(r) {
+    var pr = preread[r.id] || { status: "pending", text: "" };
+    var mech = pr.status === "ready" ? h("div", { cls: "mech", text: pr.text })
+      : pr.status === "error" ? h("div", { cls: "mech muted", text: "Pre-read failed" + (pr.text ? ": " + pr.text : ".") + " Ask about this row below." })
+      : h("div", { cls: "mech muted", text: "Reading the code…" });
+    var tierName = (TIERS.filter(function (t) { return t[0] === r.tier; })[0] || ["", r.tier])[1];
+    var out = [];
+    out.push(h("section", { cls: "sec" },
+      h("div", { cls: "explain" },
+        h("div", null, h("p", { cls: "cap", text: "Why this row matters" }), h("div", { cls: "why", text: r.why || "(no Why text)" })),
+        h("div", null, h("p", { cls: "cap", text: "What the code does" }), mech)),
+      h("div", { cls: "src muted" }, h("span", { cls: "rid " + r.tier, text: r.id }),
+        " " + tierName + " row · " + bundle.qr + " · Why from REVIEW.md, mechanism pre-read by the agent")));
+
+    out.push(h("section", { cls: "sec fhead" },
+      h("span", { cls: "path", text: r.file || "(no file cited)" }),
+      h("span", { cls: "muted mono", text: range(r) }),
+      h("button", { id: "open-btn", disabled: !r.file, onclick: openEditor,
+        title: "Runs only an allow-listed editor command", "aria-keyshortcuts": "e" },
+        "Open in editor", h("kbd", { text: "e", "aria-hidden": "true" }))));
+
+    var diff = h("div", { cls: "diff", id: "diff" });
+    if (!r.diff || !r.diff.length) diff.appendChild(h("div", { cls: "dl h", text: "No diff for this row." }));
+    (r.diff || []).forEach(function (l) {
+      if (l.t === "h") { diff.appendChild(h("div", { cls: "dl h", text: l.text })); return; }
+      diff.appendChild(h("div", { cls: "dl " + l.t + (l.in ? " in" : "") },
+        h("span", { cls: "n", text: l.old == null ? "" : String(l.old) }),
+        h("span", { cls: "n", text: l.new == null ? "" : String(l.new) }),
+        h("span", { cls: "s", text: l.t === "a" ? "+" : l.t === "d" ? "-" : "" }),
+        h("span", { cls: "c", text: l.text === "" ? " " : l.text })));
+    });
+    out.push(h("section", { cls: "sec", style: "padding:0" }, diff));
+
+    out.push(renderTalk(r));
+    out.push(renderVerdict(r));
+    return out;
+  }
+
+  function renderTalk(r) {
+    var list = h("div", { id: "talk" });
+    (talk[r.id] || []).forEach(function (t) {
+      list.appendChild(h("div", { cls: "msg" }, h("span", { cls: "who", text: "You:" }), h("span", { cls: "body", text: t.q })));
+      if (t.error) list.appendChild(h("div", { cls: "msg err" }, h("span", { cls: "who", text: "Agent:" }), h("span", { cls: "body", text: t.error })));
+      else if (t.a !== undefined) {
+        list.appendChild(h("div", { cls: "msg" }, h("span", { cls: "who", text: "Agent:" }), h("span", { cls: "body", text: t.a })));
+        (t.options || []).forEach(function (o) {
+          var val = o[0] + ": " + o[1];
+          list.appendChild(h("div", { cls: "opt" + (picked[r.id] === val ? " picked" : "") },
+            h("span", { cls: "k", text: o[0] }), h("span", { cls: "v", text: o[1] }),
+            h("button", { disabled: !!r.status, onclick: function () { pick(r, val); }, "aria-label": "Pick " + o[0], text: "Pick" })));
+        });
+      }
+    });
+    if (asking[r.id] !== undefined) {
+      list.appendChild(h("div", { cls: "msg muted", id: "asking", text: "Agent is reading… " + asking[r.id] + " s" }));
+    }
+    var input = h("input", { type: "text", id: "ask-input", placeholder: "Ask about this row…", "aria-label": "Question about this row",
+      onkeydown: function (e) { if (e.key === "Enter") { e.preventDefault(); ask(r, input); } } });
+    return h("section", { cls: "sec" },
+      h("p", { cls: "cap", text: "Discussion" }),
+      h("p", { cls: "muted", style: "margin:0 0 6px;font-size:12px", text: "The agent reads the repo and does not change files." }),
+      list,
+      h("div", { cls: "ask" }, input,
+        h("button", { disabled: asking[r.id] !== undefined, onclick: function () { ask(r, input); }, text: "Ask" })));
+  }
+
+  function vbtn(label, key, fn, disabled) {
+    return h("button", { onclick: fn, disabled: disabled, "aria-keyshortcuts": key }, label, h("kbd", { text: key, "aria-hidden": "true" }));
+  }
+
+  function renderVerdict(r) {
+    var closed = !!r.status;
+    var sec = h("section", { cls: "sec" },
+      h("p", { cls: "cap", text: "Verdict" }),
+      h("div", { cls: "vbar" },
+        vbtn("Verified", "a", function () { verdict("verified"); }, closed),
+        vbtn("Queue fix", "f", function () { verdict("fix"); }, closed),
+        vbtn("Raise bug", "b", function () { verdict("bug"); }, closed),
+        vbtn("Defer", "d", function () { verdict("defer"); }, closed),
+        vbtn("Skip", "s", function () { verdict("skip"); }, false),
+        h("span", { cls: "hint muted" }, h("kbd", { text: "j" }), h("kbd", { text: "k" }), " next / previous")));
+    if (closed) sec.appendChild(h("p", { cls: "muted", text: r.id + " is already " + pillOf(r)[1] + " in REVIEW.md." }));
+    if (!closed && panel) sec.appendChild(panel === "fix" ? fixPanel(r) : notePanel(r, panel));
+    if (!openCount() && !tier3Pending()) sec.appendChild(h("p", { cls: "muted", text: "Every row has a verdict. Finish the walk to hand back to the terminal." }));
+    return sec;
+  }
+
+  function draft(r) { return drafts[r.id] || (drafts[r.id] = { detail: "", proves: "", note: "" }); }
+
+  function fixPanel(r) {
+    var d = draft(r);
+    var pv = h("div", { cls: "preview", id: "fix-preview" });
+    var upd = function () { pv.textContent = fixPreview(r, picked[r.id] || "", d.detail, d.proves); };
+    var detail = h("textarea", { id: "fix-detail", rows: 6, oninput: function () { d.detail = detail.value; upd(); } });
+    detail.value = d.detail;
+    var proves = h("textarea", { id: "fix-proves", rows: 2, oninput: function () { d.proves = proves.value; upd(); } });
+    proves.value = d.proves;
+    upd();
+    var chosen = picked[r.id]
+      ? h("div", { cls: "chosen" }, h("b", { text: "Chosen option: " }), picked[r.id], " ",
+          h("button", { onclick: function () { delete picked[r.id]; render(); }, text: "Clear" }))
+      : h("div", { cls: "chosen muted", text: "No option picked. Write the ruling in full below." });
+    return h("div", { cls: "panel", id: "fix-panel" },
+      h("h4", { text: "Queue fix for " + r.id }),
+      chosen,
+      h("label", { "for": "fix-detail", text: "Decision detail" }), detail,
+      h("label", { "for": "fix-proves", text: "Proves it" }), proves,
+      h("label", { text: "Written to REVIEW.md as:" }), pv,
+      h("div", { cls: "row-actions" },
+        h("button", { cls: "primary", onclick: function () { submitFix(r); }, text: "Queue fix" }),
+        h("button", { onclick: closePanel, text: "Cancel" })));
+  }
+
+  var NOTE = {
+    bug: ["Raise bug for ", "Describe the bug", "Raise bug", "BUG PENDING"],
+    defer: ["Defer ", "Reason for deferring", "Defer", "DEFERRED"],
+    verified: ["Verify ", "Mechanism: what makes this row correct (the pre-read is not ready)", "Verified", "RESOLVED (VERIFIED)"]
+  };
+  function notePanel(r, kind) {
+    var n = NOTE[kind], d = draft(r);
+    var ta = h("textarea", { id: "note-text", rows: 4, oninput: function () { d.note = ta.value; } });
+    ta.value = d.note;
+    return h("div", { cls: "panel", id: "note-panel" },
+      h("h4", { text: n[0] + r.id }),
+      h("label", { "for": "note-text", text: n[1] }), ta,
+      h("div", { cls: "row-actions" },
+        h("button", { cls: "primary", onclick: function () { submitNote(r, kind); }, text: n[2] }),
+        h("button", { onclick: closePanel, text: "Cancel" })));
+  }
+
+  function render() {
+    if (dead && !bundle) return;
+    renderTop();
+    renderRail();
+    var main = $("main");
+    // Re-rendering replaces the column; keep the focused field, its text and caret.
+    var a = document.activeElement, keep = null;
+    if (a && a.id && (a.tagName === "INPUT" || a.tagName === "TEXTAREA")) {
+      keep = { id: a.id, value: a.value, s: a.selectionStart, e: a.selectionEnd };
+    }
+    var top = main.scrollTop;
+    main.textContent = "";
+    var parts = cur < 0 ? (tier3Pending() ? renderTier3() : [h("section", { cls: "sec muted", text: "No rows in this review." })]) : renderRow(row());
+    parts.forEach(function (p) { main.appendChild(p); });
+    main.scrollTop = top;
+    if (keep && $(keep.id)) {
+      var f = $(keep.id);
+      f.value = keep.value;
+      f.focus({ preventScroll: true });
+      try { f.setSelectionRange(keep.s, keep.e); } catch (x) {}
+    }
+    $("finish").disabled = dead;
+  }
+
+  // ---- actions -----------------------------------------------------------------
+  var prereadTimer = null;
+  function pollPreread(r) {
+    if (prereadTimer) { clearTimeout(prereadTimer); timers.delete(prereadTimer); prereadTimer = null; }
+    if (!r || dead) return;
+    var p = preread[r.id];
+    if (p && p.status !== "pending") return;
+    api("/api/preread?row=" + encodeURIComponent(r.id)).then(function (res) {
+      preread[r.id] = res;
+      if (row() === r) {
+        if (res.status === "pending") prereadTimer = later(function () { pollPreread(r); }, 2000);
+        else if (!panel || panel === "verified") render();
+      }
+    }, report);
+  }
+
+  function select(i) {
+    if (dead || !bundle) return;
+    if (tier3Pending() && i >= 0) { cur = -1; render(); showError("Answer tier 3 first: Accept, or challenge it in the terminal."); return; }
+    if (i < -1 || i >= bundle.rows.length) return;
+    cur = i;
+    panel = null;
+    render();
+    $("main").scrollTop = 0;
+    pollPreread(row());
+  }
+
+  function nextOpen() {
+    var n = bundle.rows.length;
+    for (var k = 1; k <= n; k++) {
+      var i = (cur + k) % n, r = bundle.rows[i];
+      if (!r.status && !skipped[r.id]) return i;
+    }
+    for (k = 1; k <= n; k++) { i = (cur + k) % n; if (!bundle.rows[i].status) return i; }
+    return cur;
+  }
+
+  function acceptTier3() {
+    var b = $("t3-accept"); if (b) b.disabled = true;
+    api("/api/verdict", { row: "tier3", kind: "tier3" }).then(function (res) {
+      bundle.tier3.status = res.status || "TIER 3 ACCEPTED";
+      toast("Tier 3 → REVIEW.md");
+      select(firstOpen());
+    }, function (e) { if (b) b.disabled = false; report(e); });
+  }
+
+  function firstOpen() {
+    for (var i = 0; i < bundle.rows.length; i++) if (!bundle.rows[i].status) return i;
+    return bundle.rows.length ? 0 : -1;
+  }
+
+  function post(r, body) {
+    return api("/api/verdict", body).then(function (res) {
+      r.status = res.status;
+      delete skipped[r.id];
+      delete drafts[r.id];
+      panel = null;
+      $("banner").classList.remove("show");
+      toast(r.id + " → REVIEW.md");
+      select(nextOpen());
+    }, report);
+  }
+
+  function verdict(kind) {
+    var r = row();
+    if (!r || dead) return;
+    if (kind === "skip") { if (!r.status) skipped[r.id] = true; toast(r.id + " skipped"); select(nextOpen()); return; }
+    if (r.status) return;
+    if (kind === "verified") {
+      var p = preread[r.id];
+      if (p && p.status === "ready") { post(r, { row: r.id, kind: "verified", mechanism: "" }); return; }
+    }
+    panel = kind;
+    render();
+    var f = $(kind === "fix" ? "fix-detail" : "note-text");
+    if (f) f.focus();
+  }
+
+  function closePanel() { panel = null; render(); }
+
+  function pick(r, val) {
+    if (r.status) return;
+    picked[r.id] = val;
+    panel = "fix";
+    render();
+    var f = $("fix-detail"); if (f) { f.focus(); f.scrollIntoView({ block: "center" }); }
+  }
+
+  function submitFix(r) {
+    var d = draft(r), opt = picked[r.id] || "";
+    if (!opt.trim() && !d.detail.trim()) { showError("A fix needs a ruling: pick an option or write the decision detail."); return; }
+    if (!d.proves.trim()) { showError("A fix needs “proves it”: the behaviour a test will assert."); return; }
+    post(r, { row: r.id, kind: "fix", option: opt, detail: d.detail, proves: d.proves });
+  }
+
+  function submitNote(r, kind) {
+    var t = draft(r).note;
+    if (!t.trim()) { showError(NOTE[kind][1] + " is required."); return; }
+    var body = { row: r.id, kind: kind };
+    body[kind === "defer" ? "reason" : kind === "bug" ? "detail" : "mechanism"] = t;
+    post(r, body);
+  }
+
+  function openEditor() {
+    var r = row();
+    if (!r || !r.file || dead) return;
+    api("/api/open", { row: r.id }).then(function (res) {
+      if (res.ok) toast("Opened " + r.file);
+      else showError("Open in editor: " + (res.reason || "refused"));
+    }, report);
+  }
+
+  function ask(r, input) {
+    var q = input.value.trim();
+    if (!q || asking[r.id] !== undefined || dead) return;
+    var entry = { q: q };
+    (talk[r.id] = talk[r.id] || []).push(entry);
+    asking[r.id] = 0;
+    input.value = "";
+    render();
+    var finishAsk = function () { delete asking[r.id]; if (row() === r) render(); };
+    api("/api/ask", { row: r.id, question: q }, true).then(function (s) {
+      var reader = s.res.body.getReader(), dec = new TextDecoder(), buf = "";
+      var handle = function (line) {
+        if (!line.trim()) return;
+        var msg; try { msg = JSON.parse(line); } catch (e) { return; }
+        if (msg.type === "status") {
+          asking[r.id] = msg.elapsed;
+          if (row() === r && $("asking")) $("asking").textContent = "Agent is reading… " + msg.elapsed + " s";
+        }
+        else if (msg.type === "answer") { entry.a = msg.text; entry.options = msg.options || []; }
+        else if (msg.type === "error") { entry.error = "The agent command failed: " + msg.text; }
+      };
+      var pump = function () {
+        return reader.read().then(function (x) {
+          if (x.done) {
+            handle(buf); s.done();
+            if (entry.a === undefined && !entry.error) entry.error = "The answer stream ended without an answer.";
+            finishAsk();
+            return;
+          }
+          buf += dec.decode(x.value, { stream: true });
+          var i;
+          while ((i = buf.indexOf("\n")) >= 0) { handle(buf.slice(0, i)); buf = buf.slice(i + 1); }
+          return pump();
+        });
+      };
+      return pump().catch(function (e) {
+        s.done();
+        if (dead) return;
+        if (!(e && e.name === "AbortError")) serverGone();
+      });
+    }, function (e) { entry.error = e.message; finishAsk(); report(e); });
+  }
+
+  function finish(challenge) {
+    if (dead) return;
+    $("finish").disabled = true;
+    var bye = function () {
+      halt();
+      document.body.textContent = "";
+      document.body.appendChild(h("div", { cls: "done" },
+        h("p", { text: "Walk handed back to the terminal" }),
+        challenge ? h("p", { cls: "muted", style: "font-size:14px", text: "Challenge tier 3 there." }) : null,
+        h("p", { cls: "muted", style: "font-size:14px", text: "You can close this window." })));
+    };
+    api("/api/finish", {}).then(bye, function (e) {
+      if (e instanceof ApiError && e.status) { $("finish").disabled = false; report(e); }
+      else bye();
+    });
+  }
+  $("finish").addEventListener("click", function () { finish(false); });
+
+  // ---- keys ------------------------------------------------------------------------
+  document.addEventListener("keydown", function (e) {
+    if (dead || !bundle || e.metaKey || e.ctrlKey || e.altKey || e.shiftKey) return;
+    var t = e.target;
+    if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.tagName === "SELECT" || t.isContentEditable)) return;
+    var k = e.key;
+    if (k === "j") select(Math.min(cur + 1, bundle.rows.length - 1));
+    else if (k === "k") select(Math.max(cur - 1, tier3Pending() ? -1 : 0));
+    else if (cur < 0) return;
+    else if (k === "a") verdict("verified");
+    else if (k === "f") verdict("fix");
+    else if (k === "b") verdict("bug");
+    else if (k === "d") verdict("defer");
+    else if (k === "s") verdict("skip");
+    else if (k === "e") openEditor();
+    else return;
+    e.preventDefault();
+  });
+
+  // ---- boot ----------------------------------------------------------------------
+  if (!TOKEN) {
+    dead = true;
+    $("meta").textContent = "rwalk review screen";
+    showError("This page has no access token. Close this window and rerun rwalk --screen (or rerun rwalk without --screen to walk in the terminal).");
+    return;
+  }
+  api("/api/bundle").then(function (b) {
+    bundle = b;
+    bundle.tier3 = bundle.tier3 || { status: null, files: 0 };
+    if (tier3Pending()) { cur = -1; render(); }
+    else select(firstOpen());
+  }, report);
+})();
+</script>
+</body>
+</html>
