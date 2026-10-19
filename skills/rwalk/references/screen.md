@@ -6,12 +6,13 @@ screen; the scripts below are skill-relative under `scripts/`.
 ## Fallback
 
 Any of these prints exactly one line, `Screen failed: {error}. Continuing in the terminal.`,
-and then runs the terminal walk from the current position:
+then runs "After the screen exits" steps 1 and 2 (raise `BUG PENDING` rows, mirror
+`DEFERRED` rows), then runs the terminal walk from the current position:
 
 1. The bundle step exits non-zero (use its `error: …` stderr text).
-2. The server prints no URL line.
-3. The server exits with no summary line.
-4. The summary says `finished: false` (idle): say the screen timed out as the error.
+2. The server exits with status 2 (use its `error: …` stderr text), prints no URL line,
+   or exits with no summary line.
+3. The summary says `finished: false` (idle): say the screen timed out as the error.
    Keep every verdict already written.
 
 ## Run
@@ -22,7 +23,8 @@ and then runs the terminal walk from the current position:
    in `kerbe.yml.example`.
 3. Check the bundle builds, into a fresh directory from `mktemp -d`:
    `scripts/bundle.py --review {REVIEW.md} --repo {code repo} --base {base_branch} --slice {slice} --out {dir}`.
-   On failure, fall back.
+   The directory is only a build check; delete it once the bundle builds. On failure,
+   fall back.
 4. Start the server as a background process, keeping its stdout:
    `scripts/serve.py --review {REVIEW.md} --repo {code repo} --base {base_branch} --slice {slice} --discussion {slice folder}/REVIEW-discussion.md --discuss-cmd "{discuss_cmd}" [--editor-template "{editor_cmd}"]`.
    Read its first stdout line, a JSON object with the `url`; if none arrives, fall back.

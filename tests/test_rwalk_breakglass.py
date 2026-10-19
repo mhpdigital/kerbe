@@ -19,7 +19,13 @@ class BreakGlassTest(unittest.TestCase):
 
     def test_screen_reference_has_fallback(self):
         text = (REPO / "skills/rwalk/references/screen.md").read_text()
-        self.assertIn("Continuing in the terminal", text)
+        self.assertIn("Screen failed: {error}. Continuing in the terminal.", text)
+
+    def test_bug_pending_raised_before_nothing_to_walk(self):
+        text = (REPO / "skills/rwalk/SKILL.md").read_text()
+        raise_at = text.index("raise each `BUG PENDING` row")
+        self.assertLess(raise_at, text.index("nothing to walk"))
+        self.assertLess(raise_at, text.index("start the fix batch instead"))
 
 
 if __name__ == "__main__":

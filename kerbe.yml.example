@@ -59,9 +59,9 @@ kerbe:
   # rwalk:
   #   discuss_cmd: "claude -p --model sonnet --allowedTools Read,Grep,Glob"
                                           # optional: read-only command the rwalk --screen discussion pane runs
-                                          #   (prompt on stdin). Unset ⇒ the host default; Codex hosts use:
+                                          #   (prompt on stdin); unset ⇒ the host default. Codex hosts use:
                                           #   "codex exec --sandbox read-only -"
-  constraints: []                      # environment rules that hold for EVERY skill's dispatches, e.g.
+  constraints: []                         # environment rules that hold for EVERY skill's dispatches, e.g.
     # - "never run a destructive database command"
   constraints_by_skill: {}                # rules that hold for ONE skill only, e.g.
     # coverage:

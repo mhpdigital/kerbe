@@ -73,9 +73,13 @@ fix worker's brief includes the detail text:
 ```
 
 A `bug` verdict made on the review screen is recorded as `**BUG PENDING {date}**` with
-`Bug: {description}` in the Why cell. It is decided: the walk skips it, and the next
-terminal walk (or the screen's finish) raises it via `kerbe:bug` and replaces the status
-with `**BUG-{id} RAISED**`.
+`Bug: {description}` after the struck Why. It is decided: the walk skips it, and the
+next walk (or the screen's finish) raises it via `kerbe:bug` and replaces the status with
+`**BUG-{id} RAISED**`.
+
+```markdown
+| B3 | ~~{original cells}~~ **BUG PENDING {date}** | ~~{why}~~ Bug: {description} | ~~{open cmd}~~ |
+```
 
 For a flag paragraph, strike the paragraph and append the same status and ruling. The fix
 batch later replaces `FIX QUEUED` with `FIXED {sha}`, keeping the ruling.

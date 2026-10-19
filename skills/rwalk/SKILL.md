@@ -37,11 +37,12 @@ ids: `B1…`, `G1…`, `F1…`.
 
 A row is closed only when it has an unstruck bold status: `RESOLVED`, `VERIFIED`,
 `FIXED`, `DEFERRED`, `FALSE POSITIVE`, `EXPECTED`, `IMPROVED`, `REMOVED`, or
-`BUG-{id} RAISED`. `FIX QUEUED` and `BUG PENDING` are decided, so the walk skips them, but
-`FIX QUEUED` stays owed to the fix batch. Before its first item turn, raise each
-`BUG PENDING` row via `kerbe:bug` and record `BUG-{id} RAISED`. Otherwise it is open. Tier 3 is closed by its bold status line directly under
-`### Boilerplate`.
+`BUG-{id} RAISED`. `FIX QUEUED` and `BUG PENDING` are decided, so the walk skips them, but `FIX QUEUED`
+stays owed to the fix batch. Otherwise it is open. Tier 3 is closed by its bold status
+line directly under `### Boilerplate`.
 
+- First, in every QR, raise each `BUG PENDING` row via `kerbe:bug` and record
+  `BUG-{id} RAISED`, before any other branch below.
 - Target the newest QR with anything open. If all are closed, report
   `{slice} QR-{n}: {m}/{m} closed — nothing to walk` and stop. If only `FIX QUEUED` rows
   remain, start the fix batch instead.
