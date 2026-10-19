@@ -89,6 +89,7 @@ class QrTest(unittest.TestCase):
         g1 = qr.rows[2]
         self.assertEqual((g1.start, g1.end), (5, None))
         self.assertIsNone(qr.tier3_status)
+        self.assertEqual(qr.tier3_files, 1)
 
     def test_verified_row_syntax(self):
         out = qr_mod.write_verdict(TEXT, "QR-1", "B1", Verdict("verified", mechanism="findVisibleFor() filters on owner"), "2026-10-20")

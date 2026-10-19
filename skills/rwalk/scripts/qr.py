@@ -60,6 +60,7 @@ class QR:
     rows: list = field(default_factory=list)
     tier3_status: "str | None" = None
     reviewed_at: "str | None" = None
+    tier3_files: int = 0
 
 
 @dataclass
@@ -225,6 +226,10 @@ def parse(text):
         if "Boilerplate" in secs:
             m = TIER3_RE.search("".join(lines[secs["Boilerplate"][0]:secs["Boilerplate"][1]]))
             q.tier3_status = m.group(1) if m else None
+            q.tier3_files = sum(
+                1 for l in lines[secs["Boilerplate"][0] + 1:secs["Boilerplate"][1]]
+                if l.lstrip().startswith("|") and "---" not in l
+                and _row_cells(l) and _row_cells(l)[0].strip() != "File")
         qrs.append(q)
     by_id = {q.id: q for q in qrs}
     for qid, kind, i, j, rid, tier in found:
