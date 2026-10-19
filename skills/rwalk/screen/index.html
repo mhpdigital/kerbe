@@ -150,7 +150,8 @@ textarea, input[type=text] { font: inherit; color: inherit; background: var(--bg
   var drafts = {};              // row id -> {detail, proves, note}
   var timers = new Set();
   var inflight = new Set();
-  var GONE = "Server stopped. Return to the terminal; rerun rwalk without --screen to continue there.";
+  var RECOVER = "Reopen the URL printed in the terminal, or rerun rwalk without --screen to continue there.";
+  var GONE = "Server stopped. " + RECOVER;
   var TIERS = [["B", "Business logic"], ["G", "Glue"], ["F", "Flags"]];
 
   var $ = function (id) { return document.getElementById(id); };
@@ -177,8 +178,9 @@ textarea, input[type=text] { font: inherit; color: inherit; background: var(--bg
   // ---- token ---------------------------------------------------------------
   var m = /(?:^#|&)t=([^&]+)/.exec(location.hash || "");
   if (m) {
+    // The fragment stays in place so a reload keeps working; fragments are never
+    // sent in Referer or reach server logs.
     try { TOKEN = decodeURIComponent(m[1]); } catch (e) { TOKEN = ""; }
-    history.replaceState(null, "", location.pathname + location.search);
   }
 
   // ---- errors / stop -------------------------------------------------------
@@ -666,7 +668,7 @@ textarea, input[type=text] { font: inherit; color: inherit; background: var(--bg
         challenge ? h("p", { cls: "muted", style: "font-size:14px", text: "Challenge tier 3 there." }) : null,
         h("p", { cls: "muted", style: "font-size:14px", text: "You can close this window." })));
     };
-    api("/api/finish", {}).then(bye, function (e) {
+    api("/api/finish", challenge ? { challenge: true } : {}).then(bye, function (e) {
       if (e instanceof ApiError && e.status) { $("finish").disabled = false; report(e); }
       // status 0 / dead: serverGone() already showed the GONE banner; keep it.
     });
@@ -696,7 +698,7 @@ textarea, input[type=text] { font: inherit; color: inherit; background: var(--bg
   if (!TOKEN) {
     dead = true;
     $("meta").textContent = "rwalk review screen";
-    showError("This page has no access token. Close this window and rerun rwalk --screen (or rerun rwalk without --screen to walk in the terminal).");
+    showError("This page has no access token. " + RECOVER);
     return;
   }
   api("/api/bundle").then(function (b) {
