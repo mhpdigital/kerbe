@@ -136,7 +136,11 @@ def _split_flag(para):
         depth += 1 if (sp == 0 or para[sp - 1] in " \t([\"'") else -1
         if depth <= 0:
             return para[:t.end()], para[t.end():].strip()
-    return para, ""
+    m = FLAG_START.match(para)
+    for t in re.finditer(r"\*\*(?=\s|$)", para[m.end():]):
+        end = m.end() + t.end()
+        return para[:end], para[end:].strip()
+    return None, para
 
 
 def _para_continues(line):
@@ -235,6 +239,8 @@ def parse(text):
         else:
             para = " ".join(l.strip() for l in lines[i:j + 1])
             head, rest = _split_flag(para)
+            if head is None:
+                head, rest = para, ""
             file_, start, end = _ref(rest)
             row = Row(qid, rid, "F", head.strip("*").strip(), file_,
                       start, end, _unstrike(rest), _status_of(rest), i + 1)
@@ -316,6 +322,8 @@ def write_verdict(text, qr_id, row_id, v, today):
     if kind == "flag":
         para = " ".join(l.strip() for l in lines[i:j + 1])
         head, rest = _split_flag(para)
+        if head is None:
+            raise InvalidVerdict("%s has no closed bold head; fix the paragraph first" % row_id)
         old = _status_of(rest)
     else:
         old = _status_of(_row_cells(lines[i])[1])

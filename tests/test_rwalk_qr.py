@@ -286,6 +286,21 @@ class QrTest(unittest.TestCase):
         text = qr_mod.write_verdict(text, "QR-2", "F1", Verdict("bug", detail="d"), "2026-10-20")
         self.assertEqual(qr_mod.current_qr(qr_mod.parse(text)).id, "QR-1")
 
+    def test_flag_head_ending_in_quote(self):
+        text = self._flags_text('**F1 — Low: the "draft"** `src/Controller/CardController.php` L20 loads first.\n')
+        self.assertEqual(qr_mod.parse(text)[0].rows[3].file, "src/Controller/CardController.php")
+        out = qr_mod.write_verdict(text, "QR-1", "F1", Verdict("verified", mechanism="m"), "2026-10-20")
+        self.assertIn('**F1 — Low: the "draft"** ~~', out)
+        self.assertEqual(qr_mod.parse(out)[0].rows[3].status, "RESOLVED (VERIFIED)")
+        with self.assertRaisesRegex(qr_mod.InvalidVerdict, "already"):
+            qr_mod.write_verdict(out, "QR-1", "F1", Verdict("verified", mechanism="m"), "2026-10-20")
+
+    def test_flag_without_closing_bold_refuses(self):
+        text = self._flags_text("**F1 — Low: head never closes `src/Controller/CardController.php` L20 loads first.\n")
+        self.assertEqual(qr_mod.parse(text)[0].rows[3].id, "F1")
+        with self.assertRaises(qr_mod.InvalidVerdict):
+            qr_mod.write_verdict(text, "QR-1", "F1", Verdict("verified", mechanism="m"), "2026-10-20")
+
 
 if __name__ == "__main__":
     unittest.main()
