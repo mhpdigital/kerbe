@@ -177,7 +177,7 @@ textarea, input[type=text] { font: inherit; color: inherit; background: var(--bg
   // ---- token ---------------------------------------------------------------
   var m = /(?:^#|&)t=([^&]+)/.exec(location.hash || "");
   if (m) {
-    TOKEN = decodeURIComponent(m[1]);
+    try { TOKEN = decodeURIComponent(m[1]); } catch (e) { TOKEN = ""; }
     history.replaceState(null, "", location.pathname + location.search);
   }
 
@@ -221,6 +221,7 @@ textarea, input[type=text] { font: inherit; color: inherit; background: var(--bg
         return res.text().then(function (t) {
           var msg = "HTTP " + res.status;
           try { msg = JSON.parse(t).error || msg; } catch (e) {}
+          if (res.status === 403 || res.status >= 500) msg += " If this persists, return to the terminal and rerun rwalk without --screen.";
           inflight.delete(ac);
           throw new ApiError(msg, res.status);
         });
@@ -510,7 +511,7 @@ textarea, input[type=text] { font: inherit; color: inherit; background: var(--bg
       preread[r.id] = res;
       if (row() === r) {
         if (res.status === "pending") prereadTimer = later(function () { pollPreread(r); }, 2000);
-        else if (!panel || panel === "verified") render();
+        else render();
       }
     }, report);
   }
@@ -635,7 +636,7 @@ textarea, input[type=text] { font: inherit; color: inherit; background: var(--bg
       var pump = function () {
         return reader.read().then(function (x) {
           if (x.done) {
-            handle(buf); s.done();
+            handle(buf + dec.decode()); s.done();
             if (entry.a === undefined && !entry.error) entry.error = "The answer stream ended without an answer.";
             finishAsk();
             return;
@@ -667,7 +668,7 @@ textarea, input[type=text] { font: inherit; color: inherit; background: var(--bg
     };
     api("/api/finish", {}).then(bye, function (e) {
       if (e instanceof ApiError && e.status) { $("finish").disabled = false; report(e); }
-      else bye();
+      // status 0 / dead: serverGone() already showed the GONE banner; keep it.
     });
   }
   $("finish").addEventListener("click", function () { finish(false); });
