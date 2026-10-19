@@ -53,19 +53,10 @@ Before presenting anything, announce:
 
 ## Opening turn: tier 3
 
-Run this only while tier 3 is open:
-
-1. Status line present: skip to the first row.
-2. Boilerplate table empty: skip and write nothing.
-3. No status but any `B`/`G`/`F` row is closed: infer an earlier walk passed this turn;
-   record the inferred acceptance per the reference, then continue.
-4. Otherwise ask one question and stop:
-
-> Tier 3 — {n} files, trusted behind {the QR's test evidence}: {one-line grouping}.
-> Accept the tiering, or name any to challenge?
-
-Record acceptance immediately. Read challenged files with tier-1 discipline; a finding is
-a new flag, not a fabricated tier row. Then record the challenge result and close tier 3.
+Run this only while tier 3 is open, following the cases in
+[references/turns.md](references/turns.md#tier-3-opening-turn): status present or table empty
+skips it; no status but a closed row records an inferred acceptance; otherwise ask one
+question and stop. Record acceptance immediately.
 
 ## Item turn
 
@@ -86,9 +77,8 @@ One decision point per turn, then stop:
 
 Keep it short: row, mechanism, question. The code is already in the editor.
 
-For Glue only, batch up to five rows with a one-line pre-read each and open the first. One
-`ok` closes the batch. Prose about one row moves only that row into a single-item turn;
-the others wait. Never batch Business logic or Flags.
+Glue only: batch up to five rows per [references/turns.md](references/turns.md). Never
+batch Business logic or Flags.
 
 ## Human verbs
 
