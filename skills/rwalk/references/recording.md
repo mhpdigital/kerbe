@@ -65,6 +65,18 @@ worker to build without asking: what to change and what behaviour proves it.
 | F2 | ~~{original cells}~~ **FIX QUEUED {date}** | Ruled: {the change} · proves it: {behaviour the test asserts} | ~~{open cmd}~~ |
 ```
 
+A fix ruling may carry a detail beneath the option, as `Ruled: {option}<br>{detail}`; the
+fix worker's brief includes the detail text:
+
+```markdown
+| F2 | ~~{original cells}~~ **FIX QUEUED {date}** | ~~{why}~~ Ruled: {option}<br>{detail} · proves it: {behaviour the test asserts} | ~~{open cmd}~~ |
+```
+
+A `bug` verdict made on the review screen is recorded as `**BUG PENDING {date}**` with
+`Bug: {description}` in the Why cell. It is decided: the walk skips it, and the next
+terminal walk (or the screen's finish) raises it via `kerbe:bug` and replaces the status
+with `**BUG-{id} RAISED**`.
+
 For a flag paragraph, strike the paragraph and append the same status and ruling. The fix
 batch later replaces `FIX QUEUED` with `FIXED {sha}`, keeping the ruling.
 
@@ -88,8 +100,10 @@ slice's `REVIEW.md` (plus the review guide when this walk changed it), using pat
 an unrelated shared index cannot leak into the commit:
 
 ```bash
-git -C {planning_repo} commit -m "{slice}: rwalk QR-{n} — {ids} resolved" -- <slices>/{slice}/REVIEW.md [<slices>/{slice}/REVIEW_GUIDE.md]
+git -C {planning_repo} commit -m "{slice}: rwalk QR-{n} — {ids} resolved" -- <slices>/{slice}/REVIEW.md [<slices>/{slice}/REVIEW_GUIDE.md] [<slices>/{slice}/REVIEW-discussion.md]
 ```
+
+Add `REVIEW-discussion.md` to the pathspec when it exists.
 
 Report `{n} resolved · {n} fixes queued · {n} bugs raised · {n} deferred · {n} skipped`.
 Skipped rows remain open, so say that the walk stopped with open items rather than calling

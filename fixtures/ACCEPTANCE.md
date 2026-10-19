@@ -263,7 +263,19 @@ Any change to `skills/rwalk/` reruns before real use:
    a full-suite run, each row now `FIXED {sha}` with its ruling kept. Then run
    `kerbe:review` on the result: both fix commits appear as rows already closed
    `FIXED (ruled QR-{m}/{id})`, and `kerbe:rwalk` reports nothing to walk.
-5. The judgment half — whether a pre-verdict is worth reading, whether a verdict's
+5. **Screen run (`--screen`)**, on a scratch fixture QR (the cards domain) with open rows.
+   On the screen, queue two fixes whose detail spans several lines and raise one bug, then
+   Finish. Expected: the bug row is `BUG-{id} RAISED` (raised via `kerbe:bug`, not left
+   `BUG PENDING`); the fix batch starts with no question between Finish and the first
+   fix; each fix worker's brief contains its detail text; the commit includes
+   `REVIEW-discussion.md`.
+6. **Break glass.** Start a screen run, verify one row and mark one `BUG PENDING`, then
+   kill the screen server process. Run `/kerbe:rwalk` without `--screen`. Expected: the
+   bug is raised first, the walk resumes at the next open row, and the verified row is
+   untouched. Then rename `skills/rwalk/scripts/serve.py` in the scratch plugin copy and
+   run `--screen`. Expected: the `Screen failed: …. Continuing in the terminal.` line,
+   then a terminal item turn.
+7. The judgment half — whether a pre-verdict is worth reading, whether a verdict's
    mechanism sentence would survive the reviewer forgetting — is validated on the first
    real walk and recorded below. Stated, not hidden.
 
