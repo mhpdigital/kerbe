@@ -130,6 +130,10 @@ the ruled change, and when the walk ends every queued fix is built in one batch 
 `kerbe:implement` workers without asking again. The next `kerbe:review` records those
 commits as closed rows citing the ruling, so nobody walks their own fixes twice.
 
+`rwalk --screen` is the optional local-browser version of the same walk: verdicts and fix
+rulings are collected on a localhost screen and written to `REVIEW.md` exactly as the
+terminal walk would. The terminal walk remains the fallback if the screen cannot start.
+
 ### Executors
 
 Skill bodies name worker **intent** only; the dispatch mechanism lives in

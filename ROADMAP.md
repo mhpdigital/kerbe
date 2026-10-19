@@ -1397,7 +1397,7 @@ hands back to the terminal for the commit, `kerbe:bug` and the fix batch.
 - Plan: `docs/superpowers/plans/2026-10-20-kerbe-review-screen.md` (Tasks 1–8)
 - Screen design: `docs/superpowers/plans/2026-10-20-kerbe-review-screen-design.md`
 
-- [ ] rwalk review screen shipped (Task 8)
+- [x] rwalk review screen shipped (Task 8)
 
 ---
 

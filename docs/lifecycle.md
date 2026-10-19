@@ -53,7 +53,7 @@ flowchart TB
     LEDGER[("PROMISES.md — FROZEN<br/>one row per leaf promise · the denominator")]:::artifact
     VERDICT{"verdict.py — computed, never asserted"}:::gate
     REVIEW["kerbe:review — risk-tier the diff<br/>tier 1 business logic read line by line · tier 3 trusted only<br/>behind a FULL-suite run · adversarial pass over the review<br/>recorded as QR-n in REVIEW.md"]:::skill
-    RWALK["kerbe:rwalk — work the QR with the human<br/>one row per turn · pre-read, opened in the editor<br/>struck in place with the mechanism · state lives in the rows<br/>ruled fixes built in one batch at the end, never re-walked"]:::skill
+    RWALK["kerbe:rwalk — work the QR with the human<br/>one row per turn · pre-read, opened in the editor<br/>struck in place with the mechanism · state lives in the rows<br/>ruled fixes built in one batch at the end, never re-walked<br/>--screen (optional): same walk in a local browser window"]:::skill
     DONE["Slice FINISHED · merge → INDEX: done"]:::done
 
     subgraph FIXLOOP["Loop 2 — remediation, repeats until the verdict clears"]
@@ -125,6 +125,8 @@ not a result — it is a queue of decisions still owed a human, and a queue nobo
 a review that cost the effort and bought the confidence of a document. The walk makes
 working it cheap enough to actually happen: the row's lines are read before it is
 presented, the editor opens on it, and the verdict is struck into the row as it lands.
+`rwalk --screen` is an optional mode of this step: the same walk on a local browser screen,
+writing `REVIEW.md` identically, with the terminal walk as the fallback.
 
 The two loops meet at one artifact: `PROMISES.md`. Loop 1 produces the code the ledger
 measures; Loop 2 consumes what the ledger says is missing.
