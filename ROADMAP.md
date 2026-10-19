@@ -1386,6 +1386,21 @@ schema-constrained output.
 
 ---
 
+## Next — rwalk review screen (0.13.0, planned 2026-10-20)
+
+`/kerbe:rwalk --screen` walks a QR in a local app window: why the row matters, the wrapped
+diff, a read-only discussion with pickable options, verdicts, and fix rulings with a
+multi-line decision detail. It writes `REVIEW.md` exactly as the terminal walk does and
+hands back to the terminal for the commit, `kerbe:bug` and the fix batch.
+
+- Spec: `docs/specs/2026-10-20-review-screen.md`
+- Plan: `docs/superpowers/plans/2026-10-20-kerbe-review-screen.md` (Tasks 1–8)
+- Screen design: `docs/superpowers/plans/2026-10-20-kerbe-review-screen-design.md`
+
+- [ ] rwalk review screen shipped (Task 8)
+
+---
+
 ## Backlog — verification engineering gaps (noted 2026-09-24, not yet scheduled)
 
 Source: *Test & Verification Engineering for Coding Agents: Contracts, Reviewers, and Verifiers*
