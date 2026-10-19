@@ -7,6 +7,7 @@ import subprocess
 import sys
 import tempfile
 import threading
+import time
 import unittest
 
 from tests.test_rwalk_qr import TEXT
@@ -15,11 +16,23 @@ REPO = pathlib.Path(__file__).resolve().parents[1]
 SCRIPT = REPO / "skills" / "rwalk" / "scripts" / "serve.py"
 CTRL = "src/Controller/CardController.php"
 FAKE = "import sys\nsys.stdin.read()\nprint('Answer.\\nO0: a\\nO1: b')\n"
+# Sleeps 3 s only for a question containing "slow please"; pre-reads stay instant.
+FAKE_SLOW = ("import sys, time\np = sys.stdin.read()\n"
+             "if 'slow please' in p:\n    time.sleep(3)\n"
+             "print('Answer.\\nO0: a\\nO1: b')\n")
+# Crashes (non-zero exit, no output) for any prompt that mentions the repository row.
+FAKE_CRASH = ("import sys\np = sys.stdin.read()\n"
+              "if 'CardRepository' in p:\n    sys.exit(3)\n"
+              "print('Answer.\\nO0: a\\nO1: b')\n")
 
 
-class ServeTest(unittest.TestCase):
-    extra = ()
+class Harness:
+    """Server harness with no test methods. Subclasses set the class attributes
+    or override configure(); every test starts exactly one server."""
+    fake_src = FAKE
     idle = ("--idle-minutes", "1")
+    extra = ()
+    screen = "missing"   # "missing": --screen-file points at a file that does not exist
 
     def git(self, *args):
         r = subprocess.run(["git", "-C", str(self.repo), "-c", "user.name=t",
@@ -27,11 +40,14 @@ class ServeTest(unittest.TestCase):
                            capture_output=True, text=True, check=True)
         return r.stdout.strip()
 
+    def configure(self):
+        """Hook run after the repo exists and before the server starts."""
+
     def setUp(self):
         self._tmp = tempfile.TemporaryDirectory()
         self.addCleanup(self._tmp.cleanup)
-        root = pathlib.Path(self._tmp.name)
-        self.repo = root / "repo"
+        self.root = pathlib.Path(self._tmp.name)
+        self.repo = self.root / "repo"
         self.repo.mkdir()
         self.git("init", "-q", "-b", "main")
         f = self.repo / CTRL
@@ -44,27 +60,35 @@ class ServeTest(unittest.TestCase):
                              for n in range(1, 41)))
         self.git("add", CTRL)
         self.git("commit", "-q", "-m", "change")
-        sha = self.git("rev-parse", "--short", "HEAD")
+        self.sha = self.git("rev-parse", "--short", "HEAD")
         self.review = self.repo / "REVIEW.md"
-        self.review.write_text(TEXT.replace("a41c9e2", sha))
-        self.discussion = root / "REVIEW-discussion.md"
-        fake = root / "fake_agent.py"
-        fake.write_text(FAKE)
+        self.review.write_text(TEXT.replace("a41c9e2", self.sha))
+        self.discussion = self.root / "REVIEW-discussion.md"
+        fake = self.root / "fake_agent.py"
+        fake.write_text(self.fake_src)
         self.cmd = "%s %s" % (shlex.quote(sys.executable), shlex.quote(str(fake)))
+        self.configure()
         self.start()
 
-    def start(self, *extra):
+    def start(self):
         args = [sys.executable, str(SCRIPT), "--review", str(self.review),
                 "--repo", str(self.repo), "--base", "main", "--slice", "cards",
                 "--discussion", str(self.discussion), "--discuss-cmd", self.cmd,
-                "--no-window", "--today", "2026-10-20",
-                *(self.idle), *self.extra, *extra]
+                "--no-window", "--today", "2026-10-20", *self.idle, *self.extra]
+        if self.screen == "missing":
+            args += ["--screen-file", str(self.root / "missing.html")]
         self.proc = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
                                      text=True)
         self.addCleanup(self.stop)
         self.lines = queue.Queue()
-        threading.Thread(target=lambda: [self.lines.put(l) for l in self.proc.stdout],
-                         daemon=True).start()
+
+        def pump():
+            try:
+                for l in self.proc.stdout:
+                    self.lines.put(l)
+            except (ValueError, OSError):
+                pass
+        threading.Thread(target=pump, daemon=True).start()
         url = json.loads(self.lines.get(timeout=10))["url"]
         hostport, frag = url[len("http://"):].split("/#t=")
         self.host, self.port = hostport, int(hostport.split(":")[1])
@@ -76,12 +100,16 @@ class ServeTest(unittest.TestCase):
         self.proc.wait(timeout=5)
         self.proc.stdout.close()
 
-    def request(self, method, path, body=None, token="default", host=None):
-        c = http.client.HTTPConnection("127.0.0.1", self.port, timeout=10)
+    def headers(self, token="default", host=None):
         h = {"Host": host or self.host}
         tok = self.token if token == "default" else token
         if tok is not None:
             h["X-Kerbe-Token"] = tok
+        return h
+
+    def request(self, method, path, body=None, token="default", host=None):
+        c = http.client.HTTPConnection("127.0.0.1", self.port, timeout=10)
+        h = self.headers(token, host)
         data = None
         if body is not None:
             data = body if isinstance(body, bytes) else json.dumps(body).encode()
@@ -108,6 +136,16 @@ class ServeTest(unittest.TestCase):
         self.assertEqual(r.status, 200)
         return [json.loads(l) for l in r.data.decode().splitlines() if l.strip()]
 
+    def wait_preread(self, rid, tries=50):
+        for _ in range(tries):
+            r = self.json("GET", "/api/preread?row=" + rid)
+            if r["status"] != "pending":
+                return r
+            time.sleep(0.1)
+        return r
+
+
+class ServeTest(Harness, unittest.TestCase):
     def test_index_served_without_token(self):
         self.assertEqual(self.get("/", token=None).status, 200)
 
@@ -156,12 +194,12 @@ class ServeTest(unittest.TestCase):
         self.json("POST", "/api/verdict", {"row": "B2", "kind": "verified", "mechanism": "m"})
         self.assertIn("(edited)", self.review.read_text())
 
+    def test_verdict_leaves_no_temp_files(self):
+        self.json("POST", "/api/verdict", {"row": "B1", "kind": "verified", "mechanism": "m"})
+        self.assertEqual([p.name for p in self.repo.glob("REVIEW.md.*")], [])
+
     def test_verified_defaults_to_preread(self):
-        import time
-        for _ in range(50):
-            if self.json("GET", "/api/preread?row=B1")["status"] == "ready":
-                break
-            time.sleep(0.1)
+        self.wait_preread("B1")
         self.json("POST", "/api/verdict", {"row": "B1", "kind": "verified"})
         self.assertIn("Confirmed: Answer.", self.review.read_text())
 
@@ -184,16 +222,30 @@ class ServeTest(unittest.TestCase):
         self.assertEqual(r.status, 413)
         self.assertEqual(self.review.read_text(), before)
 
+    def test_negative_content_length_400(self):
+        before = self.review.read_text()
+        c = http.client.HTTPConnection("127.0.0.1", self.port, timeout=10)
+        h = self.headers()
+        h["Content-Length"] = "-5"
+        c.request("POST", "/api/verdict", headers=h)
+        r = c.getresponse()
+        self.assertEqual(r.status, 400)
+        c.close()
+        self.assertEqual(self.review.read_text(), before)
+
+    def test_non_integer_content_length_400(self):
+        c = http.client.HTTPConnection("127.0.0.1", self.port, timeout=10)
+        h = self.headers()
+        h["Content-Length"] = "abc"
+        c.request("POST", "/api/verdict", headers=h)
+        self.assertEqual(c.getresponse().status, 400)
+        c.close()
+
     def test_preread_unknown_row_404(self):
         self.assertEqual(self.get("/api/preread?row=Z9").status, 404)
 
     def test_preread_ready(self):
-        import time
-        for _ in range(50):
-            r = self.json("GET", "/api/preread?row=B2")
-            if r["status"] != "pending":
-                break
-            time.sleep(0.1)
+        r = self.wait_preread("B2")
         self.assertEqual(r["status"], "ready")
         self.assertTrue(r["text"].startswith("Answer."))
 
@@ -211,6 +263,7 @@ class ServeTest(unittest.TestCase):
         r = self.json("POST", "/api/open", {"row": "B1", "file": "/etc/passwd",
                                             "cmd": "rm -rf /"})
         self.assertFalse(r["ok"])
+        self.assertEqual(r["reason"], "no editor configured")
 
     def test_finish_exits_with_counts(self):
         self.json("POST", "/api/verdict", {"row": "B1", "kind": "verified", "mechanism": "m"})
@@ -228,7 +281,7 @@ class ServeTest(unittest.TestCase):
             http.client.HTTPConnection("127.0.0.1", self.port, timeout=2).request("GET", "/")
 
 
-class ServeOpenTest(ServeTest):
+class ServeOpenTest(Harness, unittest.TestCase):
     """Editor template present but unsafe: refused with a reason, nothing run."""
     extra = ("--editor-template", "sh -c {file}:{line}")
 
@@ -238,27 +291,87 @@ class ServeOpenTest(ServeTest):
         self.assertNotEqual(r["reason"], "no editor configured")
 
 
-class ServeScreenTest(ServeTest):
-    def test_serves_screen_file(self):
-        page = pathlib.Path(self._tmp.name) / "index.html"
+class ServeOpenOutsideTest(Harness, unittest.TestCase):
+    """A row whose file resolves outside the repo is refused before any launch."""
+    extra = ("--editor-template", "sh -c {file}:{line}")
+
+    def configure(self):
+        (self.root / "outside.php").write_text("<?php\n")
+        text = self.review.read_text()
+        old = "| B2 | `src/Repository/CardRepository.php` ·"
+        self.assertIn(old, text)
+        self.review.write_text(text.replace(old, "| B2 | `src/../../outside.php` ·"))
+
+    def test_open_outside_repo_refused(self):
+        r = self.json("POST", "/api/open", {"row": "B2"})
+        self.assertFalse(r["ok"])
+        self.assertIn("outside the repository", r["reason"])
+
+
+class ServeScreenTest(Harness, unittest.TestCase):
+    screen = "file"
+
+    def configure(self):
+        page = self.root / "index.html"
         page.write_text("<p>hello screen</p>")
-        self.stop()
-        self.start("--screen-file", str(page))
+        self.extra = ("--screen-file", str(page))
+
+    def test_serves_screen_file(self):
         self.assertIn(b"hello screen", self.get("/", token=None).data)
 
 
-class ServeIdleTest(unittest.TestCase):
+class ServeSlowAskTest(Harness, unittest.TestCase):
+    fake_src = FAKE_SLOW
+
+    def test_ask_sends_status_before_answer_and_closes(self):
+        c = http.client.HTTPConnection("127.0.0.1", self.port, timeout=15)
+        h = self.headers()
+        h["Content-Type"] = "application/json"
+        c.request("POST", "/api/ask", headers=h,
+                  body=json.dumps({"row": "B1", "question": "slow please"}).encode())
+        r = c.getresponse()
+        self.assertEqual(r.status, 200)
+        self.assertEqual(r.getheader("Connection"), "close")
+        lines = [json.loads(l) for l in r.read().decode().splitlines() if l.strip()]
+        c.close()
+        self.assertGreaterEqual(len([m for m in lines if m["type"] == "status"]), 1)
+        self.assertEqual(lines[-1]["type"], "answer")
+        self.assertEqual(lines[0]["type"], "status")
+
+    def test_client_disconnect_mid_ask_leaves_server_working(self):
+        c = http.client.HTTPConnection("127.0.0.1", self.port, timeout=15)
+        h = self.headers()
+        h["Content-Type"] = "application/json"
+        c.request("POST", "/api/ask", headers=h,
+                  body=json.dumps({"row": "B1", "question": "slow please"}).encode())
+        r = c.getresponse()
+        first = json.loads(r.fp.readline())
+        self.assertEqual(first["type"], "status")
+        c.close()
+        time.sleep(1.5)   # let the server hit the closed socket
+        self.assertEqual(self.get("/api/bundle").status, 200)
+
+
+class ServePrereadCrashTest(Harness, unittest.TestCase):
+    """The agent command dies for the B2 row only; the other rows keep working."""
+    fake_src = FAKE_CRASH
+
+    def test_failed_preread_does_not_stop_the_worker(self):
+        self.assertEqual(self.wait_preread("B2")["status"], "error")
+        self.assertEqual(self.wait_preread("B1")["status"], "ready")
+        self.assertEqual(self.wait_preread("F1")["status"], "ready")
+        self.json("POST", "/api/verdict", {"row": "B1", "kind": "verified"})
+        self.assertIn("Confirmed: Answer.", self.review.read_text())
+
+
+class ServeIdleTest(Harness, unittest.TestCase):
+    idle = ("--idle-seconds", "2")
+
     def test_idle_exit(self):
-        t = ServeTest("test_bundle")
-        t.idle = ("--idle-seconds", "2")
-        t.setUp()
-        try:
-            out = json.loads(t.lines.get(timeout=10))
-            self.assertEqual(out["reason"], "idle")
-            self.assertFalse(out["finished"])
-            self.assertEqual(t.proc.wait(timeout=5), 0)
-        finally:
-            t.doCleanups()
+        out = json.loads(self.lines.get(timeout=10))
+        self.assertEqual(out["reason"], "idle")
+        self.assertFalse(out["finished"])
+        self.assertEqual(self.proc.wait(timeout=5), 0)
 
 
 if __name__ == "__main__":

@@ -17,9 +17,11 @@ import secrets
 import shutil
 import subprocess
 import sys
+import tempfile
 import threading
 import time
 import webbrowser
+from contextlib import contextmanager
 from datetime import date, datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -58,6 +60,46 @@ def count_key(status):
     return "verified"
 
 
+def atomic_write(path, text):
+    """Write text to a temp file beside path, then os.replace it over path, so a
+    concurrent reader sees the old file or the new one, never half of it."""
+    path = Path(path)
+    tmp = tempfile.NamedTemporaryFile("w", dir=str(path.parent), delete=False,
+                                      encoding="utf-8", newline="",
+                                      prefix=path.name + ".", suffix=".tmp")
+    try:
+        with tmp:
+            tmp.write(text)
+        try:
+            shutil.copymode(str(path), tmp.name)
+        except OSError:
+            pass
+        os.replace(tmp.name, str(path))
+    except BaseException:
+        try:
+            os.unlink(tmp.name)
+        except OSError:
+            pass
+        raise
+
+
+@contextmanager
+def stdout_to_stderr():
+    """stdout is the JSON protocol; point fd 1 at stderr while a browser launcher runs."""
+    try:
+        sys.stdout.flush()
+        saved = os.dup(1)
+    except (OSError, ValueError):
+        yield
+        return
+    try:
+        os.dup2(2, 1)
+        yield
+    finally:
+        os.dup2(saved, 1)
+        os.close(saved)
+
+
 class App:
     def __init__(self, a):
         self.review = Path(a.review)
@@ -75,6 +117,9 @@ class App:
         self.finished = False
         self.reason = None
         self.done = threading.Event()
+        # Row text (title, why) is frozen here at startup; statuses are re-read from
+        # REVIEW.md on every GET /api/bundle. bundle.build cannot be re-run live because
+        # it errors once every row is decided (there is no current QR left to build).
         self.bundle = bundle_mod.build(self.review, self.repo, a.base, a.slice)
         self.qr_id = self.bundle["qr"]
         self.rows = {r["id"]: r for r in self.bundle["rows"]}
@@ -83,12 +128,16 @@ class App:
         self.pq = queue.PriorityQueue()
         self.seq = 0
         self.started = set()
+        self.bumped = set()
         self.pcond = threading.Lock()
         for i, rid in enumerate(self.rows):
             self.pq.put((i + 1, rid))
         self.seq = len(self.rows) + 1
 
     # -- REVIEW.md ----------------------------------------------------------
+    # Writers hold app.lock and replace the file atomically (atomic_write); readers
+    # (current, live_bundle, counts) take no lock and rely on that atomic replace.
+    # Only main() holds the lock around the final counts() and exit line.
     def read_review(self):
         return self.review.read_text(encoding="utf-8")
 
@@ -131,13 +180,20 @@ class App:
                 if rid in self.started:
                     continue
                 self.started.add(rid)
-            prompt = discuss.build_prompt(self.rows[rid], [], "", "preread")
-            ok, text = discuss.run(self.discuss_cmd, prompt, self.repo)
-            self.preread[rid] = {"status": "ready" if ok else "error", "text": text.strip()}
+            try:
+                prompt = discuss.build_prompt(self.rows[rid], [], "", "preread")
+                ok, text = discuss.run(self.discuss_cmd, prompt, self.repo)
+                self.preread[rid] = {"status": "ready" if ok else "error",
+                                     "text": text.strip()}
+            except Exception as e:  # one bad row must not stop the others
+                print("pre-read failed for %s: %s" % (rid, e), file=sys.stderr)
+                self.preread[rid] = {"status": "error", "text": "pre-read failed"}
 
     def bump(self, rid):
         with self.pcond:
-            if rid not in self.started and self.preread[rid]["status"] == "pending":
+            if (rid not in self.started and rid not in self.bumped
+                    and self.preread[rid]["status"] == "pending"):
+                self.bumped.add(rid)
                 self.pq.put((0, rid))
 
     # -- editor / window ----------------------------------------------------
@@ -203,6 +259,9 @@ def make_handler(app):
             except ValueError:
                 self.send_json(400, {"error": "bad Content-Length"})
                 return None
+            if n < 0:
+                self.send_json(400, {"error": "bad Content-Length"})
+                return None
             if n > MAX_BODY:
                 self.send_json(413, {"error": "body too large"})
                 return None
@@ -218,9 +277,9 @@ def make_handler(app):
             return obj
 
         def do_GET(self):
-            app.touch()
             u = urlparse(self.path)
             if u.path == "/":
+                app.touch()
                 try:
                     body = app.screen.read_bytes()
                 except OSError:
@@ -235,6 +294,7 @@ def make_handler(app):
                 return self.send_json(404, {"error": "not found"})
             if not self.authorised():
                 return
+            app.touch()
             try:
                 if u.path == "/api/bundle":
                     return self.send_json(200, app.live_bundle())
@@ -249,12 +309,12 @@ def make_handler(app):
             self.send_json(404, {"error": "not found"})
 
         def do_POST(self):
-            app.touch()
             path = urlparse(self.path).path
             if not path.startswith("/api/"):
                 return self.send_json(404, {"error": "not found"})
             if not self.authorised():
                 return
+            app.touch()
             body = self.read_body()
             if body is None:
                 return
@@ -300,8 +360,7 @@ def make_handler(app):
                                                 qr_mod.Verdict(kind=kind, **fields), today)
                 except (qr_mod.UnknownRow, qr_mod.InvalidVerdict) as e:
                     return self.send_json(400, {"error": str(e)})
-                with open(app.review, "w", encoding="utf-8", newline="") as f:
-                    f.write(text)
+                atomic_write(app.review, text)
                 q = app.current()
             if rid == "tier3":
                 status = q.tier3_status if q else None
@@ -376,15 +435,18 @@ def open_window(url):
         if sys.platform == "darwin":
             for app_name in ("Google Chrome", "Microsoft Edge"):
                 if Path("/Applications/%s.app" % app_name).exists():
-                    subprocess.Popen(["open", "-na", app_name, "--args", "--app=" + url])
+                    subprocess.Popen(["open", "-na", app_name, "--args", "--app=" + url],
+                                     stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+                                     stderr=subprocess.DEVNULL)
                     return
         else:
             for exe in ("google-chrome", "chromium", "microsoft-edge"):
                 if shutil.which(exe):
-                    subprocess.Popen([exe, "--app=" + url], stdout=subprocess.DEVNULL,
-                                     stderr=subprocess.DEVNULL)
+                    subprocess.Popen([exe, "--app=" + url], stdin=subprocess.DEVNULL,
+                                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
                     return
-        webbrowser.open(url)
+        with stdout_to_stderr():
+            webbrowser.open(url)
     except Exception as e:  # window is a convenience; never break the protocol
         print("could not open a window: %s" % e, file=sys.stderr)
 
@@ -431,6 +493,9 @@ def main(argv=None):
     time.sleep(0.2)  # let the /api/finish response flush
     server.shutdown()
     server.server_close()
+    # Take the write lock and keep it until the exit line is out, so no handler
+    # thread can be mid-write when the process exits.
+    app.lock.acquire()
     print(json.dumps({"finished": app.finished, "reason": app.reason,
                       "counts": app.counts()}), flush=True)
     return 0
