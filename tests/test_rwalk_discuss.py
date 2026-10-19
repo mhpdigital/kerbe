@@ -13,8 +13,8 @@ ROW = {
     "why": "Expired cards must be rejected",
     "status": None,
     "diff": [
-        {"t": "ctx", "old": 9, "new": 9, "text": "def check(card):", "in": False},
-        {"t": "add", "old": None, "new": 10, "text": "    return card.expiry > today", "in": True},
+        {"t": "c", "old": 9, "new": 9, "text": "def check(card):", "in": False},
+        {"t": "a", "old": None, "new": 10, "text": "    return card.expiry > today", "in": True},
     ],
 }
 ROW10 = dict(ROW, id="B10", title="Other row")
@@ -62,7 +62,33 @@ class DiscussTest(unittest.TestCase):
         for s in ("B1", "Card expiry check", "src/cards/expiry.py", "Expired cards must be rejected",
                   "return card.expiry > today"):
             self.assertIn(s, p)
+        self.assertIn("+    return card.expiry > today", p)
         self.assertNotIn("def check(card):", p)
+
+    def test_prompt_without_in_lines_shows_all_but_headers(self):
+        row = dict(ROW, diff=[
+            {"t": "h", "old": None, "new": None, "text": "@@ -9 +9 @@", "in": False},
+            {"t": "c", "old": 9, "new": 9, "text": "keep", "in": False},
+            {"t": "d", "old": 10, "new": None, "text": "gone", "in": False},
+            {"t": "a", "old": None, "new": 10, "text": "fresh", "in": False}])
+        p = discuss.build_prompt(row, [], "q", "ask")
+        self.assertIn(" keep\n-gone\n+fresh", p)
+        self.assertNotIn("@@", p)
+
+    def test_missing_cwd(self):
+        ok, out = discuss.run(f"{sys.executable} {self.echo}", "x", self.tmp / "nope")
+        self.assertFalse(ok)
+        self.assertIn("working directory not found", out)
+
+    def test_answer_heading_on_first_and_indented_lines(self):
+        path = self.tmp / "d.md"
+        discuss.append_discussion(path, "QR-1", ROW, "q", "## first\n   ### deep\n    ## code", "t")
+        text = path.read_text(encoding="utf-8")
+        self.assertIn("**Agent:** \\## first", text)
+        self.assertIn("   \\### deep", text)
+        self.assertIn("    ## code", text)
+        self.assertEqual([l for l in text.splitlines() if l.startswith("#")],
+                         ["## QR-1/B1 — Card expiry check"])
 
     def test_preread_has_no_option_instruction(self):
         p = discuss.build_prompt(ROW, [], "", "preread")

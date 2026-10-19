@@ -37,7 +37,10 @@ def build_prompt(row, history, question, kind):
     parts.append("Location: " + _loc(row))
     if row.get("why"):
         parts.append("Why it matters: " + row["why"])
-    changed = [d.get("text", "") for d in row.get("diff", []) if d.get("in")]
+    diff = [d for d in row.get("diff", []) if d.get("t") != "h"]
+    shown = [d for d in diff if d.get("in")] or diff
+    mark = {"a": "+", "d": "-"}
+    changed = [mark.get(d.get("t"), " ") + d.get("text", "") for d in shown]
     if changed:
         parts += ["", "Code under review:"] + changed
     parts.append("")
@@ -52,6 +55,8 @@ def build_prompt(row, history, question, kind):
 
 
 def run(cmd, prompt, cwd, timeout=300):
+    if not Path(cwd).is_dir():
+        return False, "working directory not found: %s" % cwd
     try:
         argv = shlex.split(cmd)
     except ValueError as e:
@@ -101,7 +106,8 @@ def append_discussion(path, qr_id, row, question, answer, when):
     prefix = "## %s/%s — " % (qr_id, row["id"])
     ans = []
     for l in answer.splitlines() or [""]:
-        ans.append("\\" + l if l.startswith("## ") else l)
+        m = re.match(r"([ ]{0,3})(#{1,6}\s)", l)
+        ans.append(m.group(1) + "\\" + l[len(m.group(1)):] if m else l)
     block = ["**You (%s):** %s" % (when, _one_line(question)), ""]
     block += ["**Agent:** " + ans[0]] + ans[1:]
     block = [l + eol for l in block]
