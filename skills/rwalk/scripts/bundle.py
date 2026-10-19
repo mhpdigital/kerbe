@@ -21,16 +21,39 @@ HUNK_RE = re.compile(r"^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@")
 MARGIN = 5
 
 
+class BundleError(Exception):
+    pass
+
+
 def _git(repo, *args):
-    r = subprocess.run(["git", "-C", str(repo), *args], capture_output=True,
-                       text=True, encoding="utf-8", errors="replace")
-    return r.returncode, r.stdout
+    try:
+        r = subprocess.run(["git", "-C", str(repo), *args], capture_output=True,
+                           text=True, encoding="utf-8", errors="replace")
+    except FileNotFoundError as e:
+        raise BundleError("git not found: %s" % e)
+    return r.returncode, r.stdout, r.stderr
+
+
+def _check_ref(repo, ref, what):
+    if ref.startswith("-"):
+        raise BundleError("%s must not start with '-': %r" % (what, ref))
+    code, _, err = _git(repo, "rev-parse", "--verify", ref + "^{commit}")
+    if code != 0:
+        raise BundleError("%s %r is not a commit in %s: %s" % (what, ref, repo, err.strip()))
+
+
+def _split(text):
+    """Split on \\n only (str.splitlines also splits on \\x0c, \\x85, ...)."""
+    parts = [p[:-1] if p.endswith("\r") else p for p in text.split("\n")]
+    if parts and parts[-1] == "":
+        parts.pop()
+    return parts
 
 
 def _hunks(diff_text):
     """[(new_start, new_len, [line dicts])] with the hunk header as the first line."""
     out = []
-    for raw in diff_text.splitlines():
+    for raw in _split(diff_text):
         m = HUNK_RE.match(raw)
         if m:
             old = int(m.group(1))
@@ -66,7 +89,9 @@ def _row_diff(repo, base, ref, row):
         lo, hi = -10 ** 9, 10 ** 9
     else:
         lo, hi = start - MARGIN, end + MARGIN
-    _, diff = _git(repo, "diff", "-U3", "%s...%s" % (base, ref), "--", row.file)
+    code, diff, err = _git(repo, "diff", "-U3", "%s...%s" % (base, ref), "--", row.file)
+    if code != 0:
+        raise BundleError("git diff failed for %s: %s" % (row.file, err.strip()))
     lines = []
     for ns, nl, body in _hunks(diff):
         if ns <= hi and ns + max(nl, 1) - 1 >= lo:
@@ -80,10 +105,12 @@ def _row_diff(repo, base, ref, row):
         return lines
     if start is None:
         return []
-    code, src = _git(repo, "show", "%s:%s" % (ref, row.file))
+    code, src, err = _git(repo, "show", "%s:%s" % (ref, row.file))
     if code != 0:
-        return [{"t": "h", "text": "file not present at %s" % ref}]
-    src_lines = src.splitlines()
+        raise BundleError("git show failed for %s: %s" % (row.file, err.strip()))
+    src_lines = _split(src)
+    if start > len(src_lines):
+        return [{"t": "h", "text": "line %d out of range" % start}]
     return [{"t": "c", "old": n, "new": n, "text": src_lines[n - 1], "in": True}
             for n in range(max(start, 1), min(end, len(src_lines)) + 1)]
 
@@ -94,6 +121,8 @@ def build(review_path, repo, base, slice_name):
     if q is None:
         raise SystemExit("no open quality review in %s" % review_path)
     ref = q.reviewed_at or "HEAD"
+    _check_ref(repo, base, "base")
+    _check_ref(repo, ref, "reviewed_at")
     rows = []
     for r in q.rows:
         rows.append({"id": r.id, "tier": r.tier, "title": r.title, "file": r.file,
@@ -111,8 +140,12 @@ def main(argv=None):
     ap.add_argument("--slice", required=True)
     ap.add_argument("--out", required=True)
     a = ap.parse_args(argv)
-    bundle = build(Path(a.review), Path(a.repo), a.base, a.slice)
-    Path(a.out).write_text(json.dumps(bundle, indent=2), encoding="utf-8")
+    try:
+        bundle = build(Path(a.review), Path(a.repo), a.base, a.slice)
+        Path(a.out).write_text(json.dumps(bundle, indent=2), encoding="utf-8")
+    except (BundleError, OSError, UnicodeDecodeError) as e:
+        print("error: %s" % e, file=sys.stderr)
+        return 2
     return 0
 
 

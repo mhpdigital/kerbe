@@ -91,6 +91,14 @@ class QrTest(unittest.TestCase):
         self.assertIsNone(qr.tier3_status)
         self.assertEqual(qr.tier3_files, 1)
 
+    def test_tier3_files_empty_and_absent(self):
+        head, rest = TEXT.split("| `templates/card/index.html.twig` | card list markup |\n")
+        self.assertEqual(qr_mod.parse(head + rest)[0].tier3_files, 0)
+        no_sec = TEXT.split("### Boilerplate")[0] + "### Flags" + TEXT.split("### Flags")[1]
+        self.assertEqual(qr_mod.parse(no_sec)[0].tier3_files, 0)
+        two = TEXT.replace("| card list markup |\n", "| card list markup |\n| `a---b.twig` | dashes |\n")
+        self.assertEqual(qr_mod.parse(two)[0].tier3_files, 2)
+
     def test_verified_row_syntax(self):
         out = qr_mod.write_verdict(TEXT, "QR-1", "B1", Verdict("verified", mechanism="findVisibleFor() filters on owner"), "2026-10-20")
         row = next(l for l in out.splitlines() if l.startswith("| B1 "))

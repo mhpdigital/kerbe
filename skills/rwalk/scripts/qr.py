@@ -28,6 +28,7 @@ SUFFIX_RE = re.compile(r"^(.*?):(\d+)(?:[–-](\d+))?$")
 EXT_RE = re.compile(r"\.[A-Za-z][A-Za-z0-9]{0,7}$")
 RULE_RE = re.compile(r"^\s*(-{3,}|\*{3,}|_{3,})\s*$")
 VERIFIED_RE = re.compile(r"^\s*(\*\*)?Verified safe", re.I)
+SEPARATOR_RE = re.compile(r"^\|\s*:?-{3,}")
 CELL_SPLIT = re.compile(r"(?<!\\)\|")
 STRUCK_RE = re.compile(r"~~.*?~~", re.S)
 
@@ -226,10 +227,12 @@ def parse(text):
         if "Boilerplate" in secs:
             m = TIER3_RE.search("".join(lines[secs["Boilerplate"][0]:secs["Boilerplate"][1]]))
             q.tier3_status = m.group(1) if m else None
-            q.tier3_files = sum(
-                1 for l in lines[secs["Boilerplate"][0] + 1:secs["Boilerplate"][1]]
-                if l.lstrip().startswith("|") and "---" not in l
-                and _row_cells(l) and _row_cells(l)[0].strip() != "File")
+            q.tier3_files = 0
+            for l in lines[secs["Boilerplate"][0] + 1:secs["Boilerplate"][1]]:
+                if l.lstrip().startswith("|") and not SEPARATOR_RE.match(l.lstrip()):
+                    cells = _row_cells(l)
+                    if cells and cells[0].strip() != "File":
+                        q.tier3_files += 1
         qrs.append(q)
     by_id = {q.id: q for q in qrs}
     for qid, kind, i, j, rid, tier in found:
