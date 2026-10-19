@@ -21,9 +21,13 @@ STATUS_RE = re.compile(
     r"(?=[\s*])[^*]*\*\*")
 TIER3_RE = re.compile(r"\*\*(TIER 3 ACCEPTED[^*]*)\*\*")
 ROW_ID_RE = re.compile(r"^[BG]\d+$")
-FLAG_RE = re.compile(r"^\*\*(F\d+) — ([^:*]+):[^*]*\*\*")
-LINES_RE = re.compile(r"\bL(\d+)(?:[–-](\d+))?|:(\d+)")
-FILE_RE = re.compile(r"`([^`\s]*[./][^`\s]*)`")
+FLAG_START = re.compile(r"^\*\*(F\d+) — ([^:*\n]+):")
+LINES_RE = re.compile(r"\bL(\d+)(?:[–-](\d+))?")
+SPAN_RE = re.compile(r"`([^`\n]+)`")
+SUFFIX_RE = re.compile(r"^(.*?):(\d+)(?:[–-](\d+))?$")
+EXT_RE = re.compile(r"\.[A-Za-z][A-Za-z0-9]{0,7}$")
+RULE_RE = re.compile(r"^\s*(-{3,}|\*{3,}|_{3,})\s*$")
+VERIFIED_RE = re.compile(r"^\s*(\*\*)?Verified safe", re.I)
 CELL_SPLIT = re.compile(r"(?<!\\)\|")
 STRUCK_RE = re.compile(r"~~.*?~~", re.S)
 
@@ -71,6 +75,7 @@ class Verdict:
 def escape_cell(s):
     """Make free text safe inside one table cell: escape pipes, newlines become <br>."""
     s = re.sub(r"(?<!\\)\|", r"\\|", s.strip())
+    s = re.sub(r"[*~]{2,}", lambda m: "".join("\\" + ch for ch in m.group()), s)
     return "<br>".join(p.strip() for p in s.splitlines() if p.strip())
 
 
@@ -98,13 +103,45 @@ def _unstrike(s):
     return re.sub(r"~~(.*?)~~", r"\1", s, flags=re.S).strip()
 
 
-def _lines_of(text):
-    m = LINES_RE.search(text)
-    if not m:
-        return None, None
-    if m.group(3):
-        return int(m.group(3)), None
-    return int(m.group(1)), int(m.group(2)) if m.group(2) else None
+def _eol(line):
+    return line[len(line.rstrip("\r\n")):]
+
+
+def _ref(text):
+    """(file, start, end) from the first path-like code span and its line reference."""
+    for m in SPAN_RE.finditer(text):
+        span = m.group(1).strip()
+        sm = SUFFIX_RE.match(span)
+        path = sm.group(1) if sm else span
+        if (not path or re.search(r"[\s()]", path) or path.startswith(".")
+                or path.startswith("slice/") or not ("/" in path or EXT_RE.search(path))):
+            continue
+        if sm:
+            return path, int(sm.group(2)), int(sm.group(3)) if sm.group(3) else None
+        lm = LINES_RE.search(text[m.end():])
+        if lm:
+            return path, int(lm.group(1)), int(lm.group(2)) if lm.group(2) else None
+        return path, None, None
+    lm = LINES_RE.search(text)
+    if lm:
+        return None, int(lm.group(1)), int(lm.group(2)) if lm.group(2) else None
+    return None, None, None
+
+
+def _split_flag(para):
+    """(head, rest) of a flag paragraph; the head is the bold run opening at 0, nested bold allowed."""
+    depth = 0
+    for t in re.finditer(r"\*\*", para):
+        sp = t.start()
+        depth += 1 if (sp == 0 or para[sp - 1] in " \t([\"'") else -1
+        if depth <= 0:
+            return para[:t.end()], para[t.end():].strip()
+    return para, ""
+
+
+def _para_continues(line):
+    return bool(line.strip()) and not FLAG_START.match(line) and not line.startswith("#") \
+        and not RULE_RE.match(line) and not VERIFIED_RE.match(line)
 
 
 def _qr_spans(lines):
@@ -135,9 +172,9 @@ def _flag_paragraphs(lines, a, b):
     """[(first_idx, last_idx_inclusive)] of paragraphs opening with a flag id."""
     out, i = [], a
     while i < b:
-        if FLAG_RE.match(lines[i]):
+        if FLAG_START.match(lines[i]):
             j = i
-            while j + 1 < b and lines[j + 1].strip():
+            while j + 1 < b and _para_continues(lines[j + 1]):
                 j += 1
             out.append((i, j))
             i = j + 1
@@ -147,7 +184,7 @@ def _flag_paragraphs(lines, a, b):
 
 
 def _row_cells(line):
-    return CELL_SPLIT.split(line.rstrip("\n").strip())[1:-1]
+    return CELL_SPLIT.split(line.rstrip("\r\n").strip())[1:-1]
 
 
 def _scan(text):
@@ -168,7 +205,7 @@ def _scan(text):
         if "Flags" in secs:
             s, e = secs["Flags"]
             for i, j in _flag_paragraphs(lines, s, e):
-                res.append((qid, "flag", i, j, FLAG_RE.match(lines[i]).group(1), "F"))
+                res.append((qid, "flag", i, j, FLAG_START.match(lines[i]).group(1), "F"))
     return lines, res
 
 
@@ -191,19 +228,16 @@ def parse(text):
             c = _row_cells(lines[i])
             concern = c[1] if len(c) > 1 else ""
             why = c[2] if len(c) > 2 else ""
-            fm = FILE_RE.search(concern)
-            start, end = _lines_of(concern)
+            file_, start, end = _ref(concern)
             row = Row(qid, rid, tier, _unstrike(STATUS_RE.sub("", concern)),
-                      fm.group(1) if fm else None, start, end, _unstrike(why),
-                      _status_of(lines[i]), i + 1)
+                      file_, start, end, _unstrike(why),
+                      _status_of(concern), i + 1)
         else:
             para = " ".join(l.strip() for l in lines[i:j + 1])
-            head = FLAG_RE.match(para)
-            rest = para[head.end():].strip()
-            fm = FILE_RE.search(rest)
-            start, end = _lines_of(rest)
-            row = Row(qid, rid, "F", head.group(0).strip("*"), fm.group(1) if fm else None,
-                      start, end, _unstrike(rest), _status_of(para), i + 1)
+            head, rest = _split_flag(para)
+            file_, start, end = _ref(rest)
+            row = Row(qid, rid, "F", head.strip("*").strip(), file_,
+                      start, end, _unstrike(rest), _status_of(rest), i + 1)
         by_id[qid].rows.append(row)
     return qrs
 
@@ -253,13 +287,15 @@ def _write_tier3(lines, qid, today):
         ev = m.group(1).strip() if m else ""
         if not ev or ev.lower().startswith("none"):
             ev = "the full suite"
-        para = "**TIER 3 ACCEPTED %s** — %d files, behind %s\n" % (today, n, ev)
-        new = ["\n", para]
+        crlf = sum(1 for l in lines if l.endswith("\r\n"))
+        eol = "\r\n" if crlf * 2 > sum(1 for l in lines if l.endswith("\n")) else "\n"
+        para = "**TIER 3 ACCEPTED %s** — %d files, behind %s%s" % (today, n, ev, eol)
+        new = [eol, para]
         if s + 1 >= len(lines) or lines[s + 1].strip():
-            new.append("\n")
+            new.append(eol)
         lines[s + 1:s + 1] = new
         if not lines[s].endswith("\n"):
-            lines[s] += "\n"
+            lines[s] += eol
         return
     raise UnknownRow(qid)
 
@@ -277,11 +313,16 @@ def write_verdict(text, qr_id, row_id, v, today):
     if hit is None:
         raise UnknownRow("%s/%s" % (qr_id, row_id))
     _, kind, i, j, _, _ = hit
-    old = "".join(lines[i:j + 1]) if kind == "flag" else lines[i]
-    if _status_of(old):
-        raise InvalidVerdict("%s is already %s" % (row_id, _status_of(old)))
+    if kind == "flag":
+        para = " ".join(l.strip() for l in lines[i:j + 1])
+        head, rest = _split_flag(para)
+        old = _status_of(rest)
+    else:
+        old = _status_of(_row_cells(lines[i])[1])
+    if old:
+        raise InvalidVerdict("%s is already %s" % (row_id, old))
     status, why_text = _verdict_parts(v, today)
-    nl = "\n" if lines[j].endswith("\n") else ""
+    nl = _eol(lines[j])
     if kind == "row":
         c = _row_cells(lines[i])
         while len(c) < 4:
@@ -292,10 +333,7 @@ def write_verdict(text, qr_id, row_id, v, today):
         c[3] = _strike(c[3]) if c[3] else c[3]
         lines[i] = "| " + " | ".join(c) + " |" + nl
     else:
-        para = " ".join(l.strip() for l in lines[i:j + 1])
-        head = FLAG_RE.match(para)
-        rest = para[head.end():].strip()
-        new = head.group(0) + (" " + _strike(rest) if rest else "")
+        new = head + (" " + _strike(rest) if rest else "")
         new += " **%s** %s" % (status, why_text)
         lines[i:j + 1] = [new + nl]
     return "".join(lines)
@@ -309,6 +347,6 @@ def _strike(s):
 
 
 if __name__ == "__main__":
-    for q in parse(open(sys.argv[1]).read()):
+    for q in parse(open(sys.argv[1], encoding="utf-8", newline="").read()):
         for r in q.rows:
             print(q.id, r.id, r.status or "open", r.file, r.start, r.end)

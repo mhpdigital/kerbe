@@ -187,6 +187,105 @@ class QrTest(unittest.TestCase):
     def test_escape_cell(self):
         self.assertEqual(qr_mod.escape_cell("a | b\nc"), "a \\| b<br>c")
 
+    # ---- fix round 1 ----
+    def _flags_text(self, flags):
+        return TEXT.split("### Flags\n")[0] + "### Flags\n\n" + flags
+
+    def test_wrapped_flag_head_and_inner_bold(self):
+        text = self._flags_text(
+            "**F1 — Medium: draft cards are readable by id when the\nowner has not published them yet** `src/Controller/CardController.php:20-41` loads first.\n\n"
+            "**F2 — Low: what a deck with **no cards** shows.** `templates/card/index.html.twig` L3 renders empty.\n")
+        rows = qr_mod.parse(text)[0].rows
+        self.assertEqual([r.id for r in rows], ["B1", "B2", "G1", "F1", "F2"])
+        self.assertEqual((rows[3].file, rows[3].start, rows[3].end), ("src/Controller/CardController.php", 20, 41))
+        out = qr_mod.write_verdict(text, "QR-1", "F2", Verdict("verified", mechanism="m"), "2026-10-20")
+        self.assertIn("**F2 — Low: what a deck with **no cards** shows.** ~~`templates/card/index.html.twig` L3 renders empty.~~ **RESOLVED (VERIFIED) 2026-10-20** Confirmed: m", out)
+        out = qr_mod.write_verdict(text, "QR-1", "F1", Verdict("verified", mechanism="m"), "2026-10-20")
+        self.assertEqual(qr_mod.parse(out)[0].rows[3].status, "RESOLVED (VERIFIED)")
+        self.assertIsNone(qr_mod.parse(out)[0].rows[4].status)
+
+    def test_adjacent_flags_do_not_absorb(self):
+        tail = ("**F2 — Low: empty deck page** `templates/card/index.html.twig` L3 renders empty.\n"
+                "Verified safe: the index route is read-only.\n")
+        text = self._flags_text("**F1 — Medium: draft cards readable by id** `src/Controller/CardController.php` L20 loads first.\n" + tail)
+        self.assertEqual([r.id for r in qr_mod.parse(text)[0].rows][-2:], ["F1", "F2"])
+        out = qr_mod.write_verdict(text, "QR-1", "F1", Verdict("bug", detail="d"), "2026-10-20")
+        self.assertTrue(out.endswith(tail))
+        self.assertIsNone(qr_mod.parse(out)[0].rows[4].status)
+
+    def test_crlf_file(self):
+        text = TEXT.replace("\n", "\r\n")
+        for rid, v in (("B1", Verdict("verified", mechanism="m")), ("F1", Verdict("bug", detail="d")),
+                       ("tier3", Verdict("tier3"))):
+            out = qr_mod.write_verdict(text, "QR-1", rid, v, "2026-10-20")
+            self.assertNotRegex(out, r"(?<!\r)\n", rid)
+            self.assertTrue(out.startswith(text.split("### Business")[0]))
+        out = qr_mod.write_verdict(text, "QR-1", "B2", Verdict("defer", reason="r"), "2026-10-20")
+        a, b = text.splitlines(keepends=True), out.splitlines(keepends=True)
+        self.assertEqual([i for i, (x, y) in enumerate(zip(a, b)) if x != y].__len__(), 1)
+        self.assertEqual(len(a), len(b))
+
+    def test_status_only_from_concern_cell(self):
+        text = TEXT.replace("query filter scopes cards", "**EXPECTED** query filter scopes cards")
+        row = qr_mod.parse(text)[0].rows[1]
+        self.assertIsNone(row.status)
+        out = qr_mod.write_verdict(text, "QR-1", "B2", Verdict("verified", mechanism="m"), "2026-10-20")
+        self.assertEqual(qr_mod.parse(out)[0].rows[1].status, "RESOLVED (VERIFIED)")
+
+    def test_file_and_line_extraction(self):
+        text = TEXT.replace(
+            "`src/Repository/CardRepository.php` · `findVisibleFor()` (L10–30)",
+            "`try`/`catch (Throwable)` in `src/Repository/CardRepository.php:267` and `.cards__actions` (L10–30)")
+        r = qr_mod.parse(text)[0].rows[1]
+        self.assertEqual((r.file, r.start, r.end), ("src/Repository/CardRepository.php", 267, None))
+        text = TEXT.replace("`src/Repository/CardRepository.php`", "`slice/cards` `.cards__actions` `src/Repository/CardRepository.php`")
+        r = qr_mod.parse(text)[0].rows[1]
+        self.assertEqual((r.file, r.start, r.end), ("src/Repository/CardRepository.php", 10, 30))
+
+    def test_flag_line_ref_tied_to_file_span(self):
+        text = self._flags_text("**F1 — Medium: weak test** `tests/Controller/CardControllerTest.php:120-135` only checks 200, see also L300.\n")
+        r = qr_mod.parse(text)[0].rows[3]
+        self.assertEqual((r.file, r.start, r.end), ("tests/Controller/CardControllerTest.php", 120, 135))
+
+    def test_escape_neutralises_markup(self):
+        out = qr_mod.write_verdict(TEXT, "QR-1", "B1", Verdict("verified", mechanism="was **FIXED x** and ~~y"), "2026-10-20")
+        self.assertEqual(qr_mod.parse(out)[0].rows[0].status, "RESOLVED (VERIFIED)")
+        row = next(l for l in out.splitlines() if l.startswith("| B1 "))
+        self.assertIn("\\*\\*FIXED x\\*\\*", row)
+        self.assertIn("\\~\\~y", row)
+        self.assertEqual(row.count("~~") % 2, 0)
+
+    def test_pre_escaped_pipe_row(self):
+        text = TEXT.replace("query filter scopes cards to the owner", "query filter a \\| b scopes cards")
+        self.assertEqual(len(qr_mod.parse(text)[0].rows), 4)
+        out = qr_mod.write_verdict(text, "QR-1", "B2", Verdict("verified", mechanism="m"), "2026-10-20")
+        self.assertIn("a \\| b scopes cards~~ Confirmed: m", out)
+        self.assertEqual(len(qr_mod.parse(out)[0].rows), 4)
+
+    def _two_qrs(self):
+        head, body = TEXT.split("## QR-1", 1)
+        return head + "## QR-1" + body + "\n---\n\n## QR-2" + body.replace("QR-1", "QR-2", 1).replace("**Review ID:** QR-1", "**Review ID:** QR-2")
+
+    def test_same_row_id_in_two_qrs(self):
+        text = self._two_qrs()
+        self.assertEqual([q.id for q in qr_mod.parse(text)], ["QR-1", "QR-2"])
+        out = qr_mod.write_verdict(text, "QR-2", "B1", Verdict("verified", mechanism="m"), "2026-10-20")
+        qrs = qr_mod.parse(out)
+        self.assertIsNone(qrs[0].rows[0].status)
+        self.assertEqual(qrs[1].rows[0].status, "RESOLVED (VERIFIED)")
+        out2 = qr_mod.write_verdict(text, "QR-1", "tier3", Verdict("tier3"), "2026-10-20")
+        qrs = qr_mod.parse(out2)
+        self.assertIsNotNone(qrs[0].tier3_status)
+        self.assertIsNone(qrs[1].tier3_status)
+
+    def test_current_qr_is_newest_with_open_row(self):
+        text = self._two_qrs()
+        self.assertEqual(qr_mod.current_qr(qr_mod.parse(text)).id, "QR-2")
+        for rid in ("B1", "B2", "G1"):
+            text = qr_mod.write_verdict(text, "QR-2", rid, Verdict("defer", reason="r"), "2026-10-20")
+        text = qr_mod.write_verdict(text, "QR-2", "F1", Verdict("bug", detail="d"), "2026-10-20")
+        self.assertEqual(qr_mod.current_qr(qr_mod.parse(text)).id, "QR-1")
+
 
 if __name__ == "__main__":
     unittest.main()
