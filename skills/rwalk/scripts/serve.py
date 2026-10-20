@@ -488,6 +488,11 @@ def main(argv=None):
     ap.add_argument("--no-window", action="store_true")
     ap.add_argument("--today")
     a = ap.parse_args(argv)
+    if os.environ.get("CODEX_SANDBOX"):
+        # The sandbox blocks the port and the discuss agent's own state writes.
+        print("error: running inside the host's command sandbox (CODEX_SANDBOX=%s); "
+              "start the server outside it" % os.environ["CODEX_SANDBOX"], file=sys.stderr)
+        return 2
     try:
         app = App(a)
     except (bundle_mod.BundleError, OSError, UnicodeDecodeError) as e:
@@ -497,7 +502,11 @@ def main(argv=None):
 
     ThreadingHTTPServer.daemon_threads = True
     ThreadingHTTPServer.block_on_close = False
-    server = ThreadingHTTPServer(("127.0.0.1", 0), make_handler(app))
+    try:
+        server = ThreadingHTTPServer(("127.0.0.1", 0), make_handler(app))
+    except OSError as e:
+        print("error: cannot listen on 127.0.0.1: %s" % e, file=sys.stderr)
+        return 2
     app.port = server.server_address[1]
     url = "http://127.0.0.1:%d/#t=%s" % (app.port, app.token)
 

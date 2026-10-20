@@ -25,7 +25,10 @@ If the human says the screen is unusable, kill the server process and take case 
 2. Read `kerbe.yml`: `planning_root`, `workspace.base_branch`, `editor_cmd`,
    `rwalk.discuss_cmd`. If `rwalk.discuss_cmd` is unset, use your host's default as listed
    in `kerbe.yml.example`.
-3. Start the server as a background process, keeping its stdout:
+3. Start the server as a background process, keeping its stdout, outside your host's
+   command sandbox: if your host sandboxes shell commands, request an unsandboxed
+   (escalated) run for this one command. Inside a sandbox the server cannot open its port
+   or run the discuss agent, and exits 2. Start it:
    `scripts/serve.py --review {REVIEW.md} --repo {code repo} --base {base_branch} --slice {slice} --discussion {slice folder}/REVIEW-discussion.md --discuss-cmd '{discuss_cmd}' [--editor-template '{editor_cmd}']`.
    Shell-quote `discuss_cmd` and `editor_cmd` in single quotes, writing each `'` inside
    them as `'\''`. Read its first stdout line, a JSON object with the `url`; if none

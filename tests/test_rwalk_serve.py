@@ -1,5 +1,9 @@
+import contextlib
 import http.client
+import importlib.util
+import io
 import json
+import os
 import pathlib
 import queue
 import shlex
@@ -9,6 +13,7 @@ import tempfile
 import threading
 import time
 import unittest
+from unittest import mock
 
 from tests.test_rwalk_qr import TEXT
 
@@ -424,6 +429,42 @@ class ScreenFileTest(unittest.TestCase):
         html = (REPO / "skills/rwalk/screen/index.html").read_text()
         self.assertIn("location.hash", html); self.assertIn("X-Kerbe-Token", html)
         self.assertNotIn("localStorage", html)
+
+
+def load_serve():
+    spec = importlib.util.spec_from_file_location("rwalk_serve", SCRIPT)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+class ServeStartupErrorTest(Harness, unittest.TestCase):
+    """Startup failures exit 2 with an error line and no URL, so the skill falls back."""
+
+    def start(self):
+        self.args = ["--review", str(self.review), "--repo", str(self.repo), "--base", "main",
+                     "--slice", "cards", "--discussion", str(self.discussion),
+                     "--discuss-cmd", self.cmd, "--no-window"]
+
+    def test_refuses_inside_codex_sandbox(self):
+        r = subprocess.run([sys.executable, str(SCRIPT), *self.args], capture_output=True,
+                           text=True, timeout=10, env={**os.environ, "CODEX_SANDBOX": "seatbelt"})
+        self.assertEqual(r.returncode, 2)
+        self.assertEqual(r.stdout, "")
+        self.assertRegex(r.stderr, r"^error: .*sandbox")
+
+    def test_bind_failure_is_an_error_line(self):
+        serve = load_serve()
+
+        def refuse(*a, **k):
+            raise PermissionError(1, "Operation not permitted")
+        err = io.StringIO()
+        with mock.patch.object(serve, "ThreadingHTTPServer", side_effect=refuse), \
+                mock.patch.dict(os.environ, {}, clear=False), \
+                contextlib.redirect_stderr(err):
+            os.environ.pop("CODEX_SANDBOX", None)
+            self.assertEqual(serve.main(self.args), 2)
+        self.assertRegex(err.getvalue(), r"^error: cannot listen on 127\.0\.0\.1: .*not permitted")
 
 
 class ServeIdleTest(Harness, unittest.TestCase):
