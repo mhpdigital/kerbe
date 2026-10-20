@@ -383,6 +383,9 @@ rather than a plan:
 - Exit condition: re-verify the closed rows against the same frozen ledger and recompute
   `{plugin}/skills/coverage/scripts/verdict.py` — the verdict, not your summary, says how
   much closer the slice is.
+- When the slice already has a QR in `REVIEW.md`, the fix list gets no new review: update
+  the slice's stale status docs (index row, fix-list status, `TIMING.md`) and stop, in
+  place of Step 7's "then review". A slice with no QR yet still goes to review.
 
 ## Review-fix mode — building a walked QR's rulings
 
@@ -401,8 +404,9 @@ When the task source is a QR's `FIX QUEUED` rows, handed over by `/kerbe:rwalk`:
   each row in `REVIEW.md` as `**FIXED {sha} {date}**`, keeping the ruling and naming the
   test, or leave it `FIX QUEUED` with a `Blocked:` note. Commit `REVIEW.md` scoped by
   pathspec.
-- Hand off to `/kerbe:review`, which records these commits as closed rows citing the
-  ruling. Do not ask the human to walk them.
+- No new review. The human ruled every fix, so a QR over the batch reviews their own
+  decisions. Update the slice's stale status docs (index row, `TIMING.md`) and stop. Do
+  not ask the human to walk the fixes, and do not offer `/kerbe:review` as the next step.
 
 ## Rules
 

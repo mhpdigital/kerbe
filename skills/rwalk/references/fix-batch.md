@@ -25,5 +25,6 @@ walk the result.
 Report `{n} fixed · {n} blocked`. A blocked row is still owed, so do not call the QR
 closed while one remains.
 
-The next `kerbe:review` records the batch's commits as already closed rows, citing the
-ruling, so the human is not asked to review their own fixes again.
+The batch gets no new `kerbe:review`. Update the slice's stale status docs and stop. If a
+later review runs for another reason, it records the batch's commits as already closed
+rows, citing the ruling, so the human is not asked to review their own fixes again.
