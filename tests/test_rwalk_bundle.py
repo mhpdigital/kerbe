@@ -1,10 +1,12 @@
 import importlib.util
 import json
 import pathlib
+import shutil
 import subprocess
 import sys
 import tempfile
 import unittest
+from unittest import mock
 
 from tests.test_rwalk_qr import TEXT
 
@@ -192,6 +194,49 @@ class BundleTest(unittest.TestCase):
         self.assertEqual(r.returncode, 2)
         self.assertTrue(r.stderr.startswith("error:"), r.stderr)
         self.assertNotIn("Traceback", r.stderr)
+
+    def test_open_cell_path_made_repo_relative(self):
+        abs_ctrl = str(self.repo.resolve() / CTRL)
+        self.review.write_text(self.review.read_text().replace(
+            "| G1 | `src/Controller/CardController.php` (L5)", "| G1 | same (L5)").replace(
+            "/abs/src/Controller/CardController.php", abs_ctrl))
+        g1 = next(r for r in bundle.build(self.review, self.repo, "main", "cards")["rows"] if r["id"] == "G1")
+        self.assertEqual(g1["file"], CTRL)
+        self.assertEqual(g1["diff"][0]["new"], 5)
+
+    def test_repo_path_other_checkout_and_outside(self):
+        with tempfile.TemporaryDirectory() as d:
+            # another checkout: relative to its own git top level
+            self.assertEqual(bundle._repo_path(pathlib.Path(d), str(self.repo / CTRL)), CTRL)
+            self.assertIsNone(bundle._repo_path(self.repo, str(pathlib.Path(d) / "x.php")))
+        self.assertIsNone(bundle._repo_path(self.repo, "/no/such/dir/x.php"))
+        self.assertEqual(bundle._repo_path(self.repo, CTRL), CTRL)
+
+    # ---- syntax highlighting ----
+    def hl_rows(self):
+        old = b'x = 1\ns = """doc\nstill doc\n"""\ny = 2\n'
+        new = b'x = 1\ns = """doc\nstill doc\n"""\ny = 3\n'
+        a, b = self.commit_pair("hl.py", old, new)
+        rows = [{"file": "hl.py", "diff": bundle._row_diff(self.repo, a, b, self.mkrow("hl.py", 5))}]
+        return a, b, rows
+
+    @unittest.skipUnless(shutil.which("pygmentize"), "pygmentize not installed")
+    def test_highlight_colours_both_sides(self):
+        a, b, rows = self.hl_rows()
+        css = bundle._highlight(self.repo, a, b, rows)
+        self.assertEqual(set(css), {"light", "dark"})
+        self.assertTrue(all(l.startswith(".diff .hl-") for l in css["dark"].splitlines()))
+        by = {(l["t"], l["old"] if l["t"] == "d" else l["new"]): l for l in rows[0]["diff"] if l["t"] != "h"}
+        self.assertIn("hl-", by[("d", 5)]["html"])      # old side, from the merge base
+        self.assertIn("3", by[("a", 5)]["html"])        # new side, from ref
+        # line 3 sits inside a docstring that opened on line 2: whole-file pass keeps it a string
+        self.assertIn('class="hl-s', by[("c", 3)]["html"])
+
+    def test_highlight_absent_leaves_plain_text(self):
+        a, b, rows = self.hl_rows()
+        with mock.patch.object(bundle.shutil, "which", return_value=None):
+            self.assertIsNone(bundle._highlight(self.repo, a, b, rows))
+        self.assertFalse(any("html" in l for l in rows[0]["diff"]))
 
     def test_no_current_qr_raises_bundle_error(self):
         self.review.write_text("# Review\n\nNo quality review here.\n")

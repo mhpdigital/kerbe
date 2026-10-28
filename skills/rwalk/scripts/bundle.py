@@ -3,15 +3,20 @@
 
 Reads the current quality review (QR) from REVIEW.md and, per row, the slice of
 git diff around the cited lines. Stdlib only; git is always called with an argv
-list, never through a shell.
+list, never through a shell. When the `pygmentize` command (Pygments) is on PATH,
+diff lines also carry syntax-highlighted HTML; without it they stay plain text.
 
     bundle.py --review REVIEW.md --repo REPO --base REF --slice NAME --out bundle.json
 """
 import argparse
+import dataclasses
 import json
 import re
+import shutil
 import subprocess
 import sys
+import tempfile
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -19,6 +24,10 @@ import qr as qr_mod  # noqa: E402
 
 HUNK_RE = re.compile(r"^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@")
 MARGIN = 5
+# Pygments' own colour schemes; the page applies one per prefers-color-scheme.
+HL_STYLES = {"light": "default", "dark": "github-dark"}
+HL_PREFIX = "hl-"
+HL_TIMEOUT = 20
 
 
 class BundleError(Exception):
@@ -115,6 +124,98 @@ def _row_diff(repo, base, ref, row):
             for n in range(max(start, 1), min(end, len(src_lines)) + 1)]
 
 
+def _pygmentize(exe, args):
+    try:
+        r = subprocess.run([exe, *args], capture_output=True, text=True,
+                           encoding="utf-8", errors="replace", timeout=HL_TIMEOUT)
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    return r.stdout if r.returncode == 0 else None
+
+
+def _highlight_file(exe, repo, rev, path):
+    """HTML lines of path at rev, or None. The whole file goes through Pygments in one
+    pass so strings and comments that span lines colour correctly."""
+    code, src, _ = _git(repo, "show", "%s:%s" % (rev, path))
+    if code != 0:
+        return None
+    with tempfile.TemporaryDirectory() as d:
+        # The file's own name picks the lexer (.php, .py, .dart, .html.twig, ...).
+        f = Path(d) / Path(path).name
+        f.write_text(src, encoding="utf-8", newline="")
+        out = _pygmentize(exe, ["-f", "html", "-O", "nowrap=True,stripnl=False,encoding=utf-8,"
+                                "classprefix=" + HL_PREFIX, str(f)])
+    if out is None:
+        return None
+    lines = _split(out)
+    return lines if len(lines) == len(_split(src)) else None
+
+
+def _highlight_css(exe):
+    """{scheme: CSS} scoped to .diff, keeping only the token-colour rules."""
+    css = {}
+    for scheme, style in HL_STYLES.items():
+        out = _pygmentize(exe, ["-S", style, "-f", "html", "-a", ".diff",
+                                "-O", "classprefix=" + HL_PREFIX])
+        if out is None:
+            return None
+        css[scheme] = "\n".join(l for l in _split(out) if l.startswith(".diff ." + HL_PREFIX))
+    return css
+
+
+def _highlight(repo, base, ref, rows):
+    """Add "html" to every code line Pygments can colour; return the CSS, or None."""
+    exe = shutil.which("pygmentize")
+    if not exe:
+        return None
+    css = _highlight_css(exe)
+    if css is None:
+        return None
+    code, mb, _ = _git(repo, "merge-base", base, ref)
+    old_rev = mb.strip() if code == 0 else None
+    # Deleted lines are numbered against the merge base (git diff base...ref),
+    # context and added lines against ref.
+    want = set()
+    for r in rows:
+        for l in r["diff"]:
+            if l["t"] == "d" and old_rev:
+                want.add((old_rev, r["file"]))
+            elif l["t"] in ("a", "c"):
+                want.add((ref, r["file"]))
+    with ThreadPoolExecutor(max_workers=8) as pool:
+        keys = sorted(want)
+        done = dict(zip(keys, pool.map(lambda k: _highlight_file(exe, repo, *k), keys)))
+    for r in rows:
+        for l in r["diff"]:
+            if l["t"] == "h":
+                continue
+            old = l["t"] == "d"
+            src = done.get((old_rev if old else ref, r["file"]))
+            n = l["old"] if old else l["new"]
+            if src and 1 <= n <= len(src):
+                l["html"] = src[n - 1]
+    return css
+
+
+def _repo_path(repo, f):
+    """Repo-relative form of a row's file. An Open-column path is absolute, and may sit in
+    another checkout of the same repo, so fall back to its own git top level."""
+    if not f or not Path(f).is_absolute():
+        return f
+    p = Path(f)
+    try:
+        return p.resolve().relative_to(Path(repo).resolve()).as_posix()
+    except ValueError:
+        pass
+    if not p.parent.is_dir():
+        return None
+    code, top, _ = _git(p.parent, "rev-parse", "--show-toplevel")
+    try:
+        return p.resolve().relative_to(Path(top.strip()).resolve()).as_posix() if code == 0 else None
+    except ValueError:
+        return None
+
+
 def build(review_path, repo, base, slice_name):
     with open(review_path, encoding="utf-8", newline="") as f:
         qrs = qr_mod.parse(f.read())
@@ -126,11 +227,13 @@ def build(review_path, repo, base, slice_name):
     _check_ref(repo, ref, "reviewed_at")
     rows = []
     for r in q.rows:
+        r = dataclasses.replace(r, file=_repo_path(repo, r.file))
         rows.append({"id": r.id, "tier": r.tier, "title": r.title, "file": r.file,
                      "start": r.start, "end": r.end, "why": r.why, "status": r.status,
                      "diff": _row_diff(repo, base, ref, r)})
     return {"slice": slice_name, "qr": q.id, "reviewed_at": q.reviewed_at,
-            "tier3": {"status": q.tier3_status, "files": q.tier3_files}, "rows": rows}
+            "tier3": {"status": q.tier3_status, "files": q.tier3_files}, "rows": rows,
+            "highlight": _highlight(repo, base, ref, rows)}
 
 
 def main(argv=None):

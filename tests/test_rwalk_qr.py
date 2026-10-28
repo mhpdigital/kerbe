@@ -91,6 +91,15 @@ class QrTest(unittest.TestCase):
         self.assertIsNone(qr.tier3_status)
         self.assertEqual(qr.tier3_files, 1)
 
+    def test_same_file_falls_back_to_open_cell(self):
+        same = TEXT.replace("| B2 | `src/Repository/CardRepository.php` · `findVisibleFor()`",
+                            "| B2 | same · `findVisibleFor()`")
+        b2 = qr_mod.parse(same)[0].rows[1]
+        self.assertEqual((b2.file, b2.start, b2.end), ("/abs/src/Repository/CardRepository.php", 10, 30))
+        plain = same.replace("`phpstorm --line 10 /abs/src/Repository/CardRepository.php`",
+                             "`/abs/src/Repository/CardRepository.php:10`")
+        self.assertEqual(qr_mod.parse(plain)[0].rows[1].file, "/abs/src/Repository/CardRepository.php")
+
     def test_tier3_files_empty_and_absent(self):
         head, rest = TEXT.split("| `templates/card/index.html.twig` | card list markup |\n")
         self.assertEqual(qr_mod.parse(head + rest)[0].tier3_files, 0)

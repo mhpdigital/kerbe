@@ -130,6 +130,16 @@ def _ref(text):
     return None, None, None
 
 
+def _open_path(cell):
+    """Absolute file path in an Open cell: `editor --line N /abs/file` or `/abs/file:N`.
+    The fallback for a row whose concern names no path (e.g. "same · `method()`")."""
+    for tok in re.findall(r"[^\s`'\"]+", _unstrike(cell)):
+        tok = re.sub(r":\d+(?:[–-]\d+)?$", "", tok)
+        if tok.startswith("/") and EXT_RE.search(tok):
+            return tok
+    return None
+
+
 def _split_flag(para):
     """(head, rest) of a flag paragraph; the head is the bold run opening at 0, nested bold allowed."""
     depth = 0
@@ -241,6 +251,8 @@ def parse(text):
             concern = c[1] if len(c) > 1 else ""
             why = c[2] if len(c) > 2 else ""
             file_, start, end = _ref(concern)
+            if file_ is None and len(c) > 3:
+                file_ = _open_path(c[3])
             row = Row(qid, rid, tier, _unstrike(STATUS_RE.sub("", concern)),
                       file_, start, end, _unstrike(why),
                       _status_of(concern), i + 1)
