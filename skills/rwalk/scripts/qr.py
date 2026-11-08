@@ -53,6 +53,9 @@ class Row:
     why: str
     status: "str | None"
     line_no: int
+    # Absolute path from the Open cell. The concern's path may be relative to a code
+    # root below the repo top (e.g. `src/` under `symfony/`); the bundle falls back to this.
+    open_file: "str | None" = None
 
 
 @dataclass
@@ -251,11 +254,12 @@ def parse(text):
             concern = c[1] if len(c) > 1 else ""
             why = c[2] if len(c) > 2 else ""
             file_, start, end = _ref(concern)
-            if file_ is None and len(c) > 3:
-                file_ = _open_path(c[3])
+            open_file = _open_path(c[3]) if len(c) > 3 else None
+            if file_ is None:
+                file_ = open_file
             row = Row(qid, rid, tier, _unstrike(STATUS_RE.sub("", concern)),
                       file_, start, end, _unstrike(why),
-                      _status_of(concern), i + 1)
+                      _status_of(concern), i + 1, open_file)
         else:
             para = " ".join(l.strip() for l in lines[i:j + 1])
             head, rest = _split_flag(para)

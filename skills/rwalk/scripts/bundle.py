@@ -216,6 +216,19 @@ def _repo_path(repo, f):
         return None
 
 
+def _resolve_file(repo, ref, row):
+    """The row's repo-relative file. A concern path is often relative to a code root
+    below the repo top (`src/...` under `symfony/`), so when it is not present at ref,
+    use the Open cell's absolute path if that one is."""
+    f = _repo_path(repo, row.file)
+    if f and _git(repo, "cat-file", "-e", "%s:%s" % (ref, f))[0] == 0:
+        return f
+    alt = _repo_path(repo, row.open_file)
+    if alt and alt != f and _git(repo, "cat-file", "-e", "%s:%s" % (ref, alt))[0] == 0:
+        return alt
+    return f
+
+
 def build(review_path, repo, base, slice_name):
     with open(review_path, encoding="utf-8", newline="") as f:
         qrs = qr_mod.parse(f.read())
@@ -227,7 +240,7 @@ def build(review_path, repo, base, slice_name):
     _check_ref(repo, ref, "reviewed_at")
     rows = []
     for r in q.rows:
-        r = dataclasses.replace(r, file=_repo_path(repo, r.file))
+        r = dataclasses.replace(r, file=_resolve_file(repo, ref, r))
         rows.append({"id": r.id, "tier": r.tier, "title": r.title, "file": r.file,
                      "start": r.start, "end": r.end, "why": r.why, "status": r.status,
                      "diff": _row_diff(repo, base, ref, r)})

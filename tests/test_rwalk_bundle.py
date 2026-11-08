@@ -204,6 +204,21 @@ class BundleTest(unittest.TestCase):
         self.assertEqual(g1["file"], CTRL)
         self.assertEqual(g1["diff"][0]["new"], 5)
 
+    def test_concern_path_under_code_root_falls_back_to_open_cell(self):
+        # The concern cites `src/...` relative to a code root (`app/`); the Open cell has
+        # the absolute path. The bundle must find the file through the Open cell.
+        nested = "app/" + CTRL
+        (self.repo / nested).parent.mkdir(parents=True)
+        self.git("mv", CTRL, nested)
+        self.git("commit", "-q", "-m", "move under code root")
+        sha = self.git("rev-parse", "--short", "HEAD")
+        self.review.write_text(self.review.read_text()
+                               .replace(self.bundle["reviewed_at"], sha)
+                               .replace("/abs/" + CTRL, str(self.repo.resolve() / nested)))
+        b1 = next(r for r in bundle.build(self.review, self.repo, "main", "cards")["rows"] if r["id"] == "B1")
+        self.assertEqual(b1["file"], nested)
+        self.assertNotIn("not present", b1["diff"][0]["text"])
+
     def test_repo_path_other_checkout_and_outside(self):
         with tempfile.TemporaryDirectory() as d:
             # another checkout: relative to its own git top level
