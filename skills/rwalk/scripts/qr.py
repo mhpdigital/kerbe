@@ -281,9 +281,12 @@ def _verdict_parts(v, today):
         return "RESOLVED (VERIFIED) " + today, "Confirmed: " + escape_cell(v.mechanism)
     if k == "fix":
         ruling = "<br>".join(escape_cell(p) for p in (v.option, v.detail) if p.strip())
-        if not ruling or not v.proves.strip():
-            raise InvalidVerdict("fix needs a ruling (option or detail) and what proves it")
-        return "FIX QUEUED " + today, "Ruled: %s · proves it: %s" % (ruling, escape_cell(v.proves))
+        if not ruling:
+            raise InvalidVerdict("fix needs a ruling (option or detail)")
+        why = "Ruled: " + ruling
+        if v.proves.strip():
+            why += " · proves it: " + escape_cell(v.proves)
+        return "FIX QUEUED " + today, why
     if k == "bug":
         t = v.detail.strip() or v.reason.strip()
         if not t:

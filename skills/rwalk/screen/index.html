@@ -294,7 +294,7 @@ textarea, input[type=text] { font: inherit; color: inherit; background: var(--bg
   }
   function fixPreview(r, option, detail, proves) {
     var ruling = [option, detail].filter(function (p) { return p && p.trim(); }).map(escapeCell).join("<br>");
-    var why = "Ruled: " + (ruling || "…") + " · proves it: " + (proves.trim() ? escapeCell(proves) : "…");
+    var why = "Ruled: " + (ruling || "…") + (proves.trim() ? " · proves it: " + escapeCell(proves) : "");
     var status = "**FIX QUEUED " + today() + "**";
     if (r.tier === "F") return "**" + r.title + "** " + strike(r.why) + " " + status + " " + why;
     return "| " + r.id + " | " + strike(r.title) + " " + status + " | " + strike(r.why) + " " + why + " | ~~…~~ |";
@@ -457,8 +457,8 @@ textarea, input[type=text] { font: inherit; color: inherit; background: var(--bg
     return h("div", { cls: "panel", id: "fix-panel" },
       h("h4", { text: "Queue fix for " + r.id }),
       chosen,
-      h("label", { "for": "fix-detail", text: "Decision detail" }), detail,
-      h("label", { "for": "fix-proves", text: "Proves it" }), proves,
+      h("label", { "for": "fix-detail", text: picked[r.id] ? "Decision detail (optional)" : "Decision detail" }), detail,
+      h("label", { "for": "fix-proves", text: "Proves it (optional)" }), proves,
       h("label", { text: "Written to REVIEW.md as:" }), pv,
       h("div", { cls: "row-actions" },
         h("button", { cls: "primary", onclick: function () { submitFix(r); }, text: "Queue fix" }),
@@ -597,7 +597,6 @@ textarea, input[type=text] { font: inherit; color: inherit; background: var(--bg
   function submitFix(r) {
     var d = draft(r), opt = picked[r.id] || "";
     if (!opt.trim() && !d.detail.trim()) { showError("A fix needs a ruling: pick an option or write the decision detail."); return; }
-    if (!d.proves.trim()) { showError("A fix needs “proves it”: the behaviour a test will assert."); return; }
     post(r, { row: r.id, kind: "fix", option: opt, detail: d.detail, proves: d.proves });
   }
 

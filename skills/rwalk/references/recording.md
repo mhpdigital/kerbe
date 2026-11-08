@@ -59,7 +59,8 @@ row correct.
 Write the edit the moment the human resolves the row. Do not wait for the end of the walk.
 
 A `fix` verdict records the ruling, not a result. The change must be specific enough for a
-worker to build without asking: what to change and what behaviour proves it.
+worker to build without asking. A chosen option alone is a complete ruling; the detail and
+the "proves it" clause are optional and are dropped from the cell when empty.
 
 ```markdown
 | F2 | ~~{original cells}~~ **FIX QUEUED {date}** | Ruled: {the change} · proves it: {behaviour the test asserts} | ~~{open cmd}~~ |

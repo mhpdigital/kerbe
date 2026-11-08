@@ -28,7 +28,7 @@ top to bottom:
 4. The **verdict**: Verified, Queue fix, Raise bug, Defer, Skip. Keys `a f b d s`, rows
    `j k`.
 5. **Queue fix** opens a panel: the chosen option (if any), a multi-line **decision
-   detail**, and **proves it**. It previews the exact `REVIEW.md` text before queueing.
+   detail**, and **proves it**. With an option chosen, both text fields are optional. It previews the exact `REVIEW.md` text before queueing.
 
 A left rail lists every row grouped B / G / F with its status. **Finish** closes the
 server and hands back to the terminal, which commits, raises bugs and runs the fix batch
@@ -100,7 +100,7 @@ or browser storage, so the terminal walk can resume from wherever the screen sto
 | Verdict | Row text (syntax per `references/recording.md`) |
 |---|---|
 | Verified | `**RESOLVED (VERIFIED) {date}**` · `Confirmed: {mechanism}` |
-| Queue fix | `**FIX QUEUED {date}**` · `Ruled: {Ox: option text}<br>{detail} · proves it: {proves}` |
+| Queue fix | `**FIX QUEUED {date}**` · `Ruled: {Ox: option text}<br>{detail} · proves it: {proves}`; empty detail and proves-it parts are dropped |
 | Raise bug | `**BUG PENDING {date}**` · `Bug: {detail}` — terminal runs `kerbe:bug` after Finish and replaces it with `BUG-{id} RAISED` |
 | Defer | `**DEFERRED {date}**` · `Deferred: {reason}` — terminal mirrors it to Known Issues after Finish |
 | Skip | nothing written |

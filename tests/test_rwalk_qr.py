@@ -124,6 +124,14 @@ class QrTest(unittest.TestCase):
         self.assertIn("~~ownership check decides who sees a card~~ Ruled: ", row)
         self.assertIn("Ruled: O2: owner gets a restore page<br>30-day window only<br>no change to findVisibleFor() · proves it: owner at 10 days gets 200", row)
 
+    def test_fix_with_option_only_omits_detail_and_proves(self):
+        v = Verdict("fix", option="O0: rename to warnIfHeavyUser")
+        out = qr_mod.write_verdict(TEXT, "QR-1", "B1", v, "2026-11-09")
+        row = next(l for l in out.splitlines() if l.startswith("| B1 "))
+        self.assertIn("Ruled: O0: rename to warnIfHeavyUser |", row)
+        self.assertNotIn("proves it", row)
+        self.assertEqual(qr_mod.parse(out)[0].rows[0].status, "FIX QUEUED")
+
     def test_fix_detail_is_cell_escaped(self):
         v = Verdict("fix", detail="use a | b\nthen `x`", proves="p")
         out = qr_mod.write_verdict(TEXT, "QR-1", "B1", v, "2026-10-20")
@@ -177,11 +185,11 @@ class QrTest(unittest.TestCase):
         with self.assertRaises(qr_mod.InvalidVerdict):
             qr_mod.write_verdict(once, "QR-1", "B1", Verdict("verified", mechanism="m"), "2026-10-20")
 
-    def test_fix_needs_ruling_and_proof(self):
+    def test_fix_needs_a_ruling_but_not_proof(self):
         with self.assertRaises(qr_mod.InvalidVerdict):
             qr_mod.write_verdict(TEXT, "QR-1", "B1", Verdict("fix", proves="p"), "2026-10-20")
-        with self.assertRaises(qr_mod.InvalidVerdict):
-            qr_mod.write_verdict(TEXT, "QR-1", "B1", Verdict("fix", detail="d"), "2026-10-20")
+        out = qr_mod.write_verdict(TEXT, "QR-1", "B1", Verdict("fix", detail="d"), "2026-10-20")
+        self.assertEqual(qr_mod.parse(out)[0].rows[0].status, "FIX QUEUED")
 
     def test_verified_needs_mechanism(self):
         with self.assertRaises(qr_mod.InvalidVerdict):

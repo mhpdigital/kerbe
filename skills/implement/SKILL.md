@@ -392,7 +392,8 @@ rather than a plan:
 When the task source is a QR's `FIX QUEUED` rows, handed over by `/kerbe:rwalk`:
 
 - One task per row, keyed by its id (`B3`, `F2`). The row's ruling is the task text and its
-  "proves it" clause is the one case the task must add as a regression test. Rows that
+  "proves it" clause, when present, is the one case the task must add as a regression test;
+  without one, the worker picks the case that would have failed before the fix. Rows that
   touch the same file go to one worker; rows on disjoint files run concurrently.
 - Effort is `standard`, or `deep` for rows touching auth, ownership, query filtering, state
   transitions, uploads or money. Record the choice as a Ruling, since no plan set it.

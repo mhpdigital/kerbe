@@ -104,6 +104,13 @@ The Open cell is a snapshot locator, never stored executable shell. Always rende
 `rwalk` resolves its current line before opening, so fixes can move it without requiring
 a command substitution in `REVIEW.md`.
 
+**Paths are repo-relative, everywhere.** Every path the QR cites — the concern column, the
+Glue and Boilerplate file columns, and file references inside flags — is relative to the
+root of the repository the diff came from, exactly as `git diff --name-only` prints it
+(`app/src/Controller/X.php`, not `src/Controller/X.php` relative to a code root). Only the
+Open cell carries the absolute path. Before recording, check each cited path with
+`git cat-file -e {tip sha}:{path}`; a path that fails is corrected, never recorded.
+
 ```
 ## QR-{n} — Code Review: {slice}
 
@@ -120,7 +127,7 @@ a command substitution in `REVIEW.md`.
 ### Business-logic — read every line
 | ID | File · concern (lines) | Why | Open |
 |---|---|---|---|
-| B1 | `src/.../File.ext` · `method()` (L12–40) | {why this needs human eyes} | {editor_cmd or file:line} |
+| B1 | `{repo-relative path}` · `method()` (L12–40) | {why this needs human eyes} | {editor_cmd or file:line} |
 
 ### Glue — read the flow, skip the syntax
 | ID | File | What to check | Open |
@@ -150,6 +157,7 @@ Record which executor ran in the QR's `Adversarial pass` line. It must check:
 
 - **Coverage** — every changed file categorised (diff `--name-only` against the tables);
   every tier-1 file has line references.
+- **Paths** — every cited path is repo-relative and exists at the reviewed tip.
 - **Mis-tiering** — anything in glue/boilerplate that touches auth, ownership, query
   filtering, state transitions, uploads, or money is tier 1.
 - **Unread inputs** — were the spec docs actually cross-checked? Re-derive the intended
